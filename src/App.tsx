@@ -18,7 +18,6 @@ import Events from "./components/Events";
 import MediaGallery from "./components/MediaGallery";
 import Attendance from "./components/Attendance";
 import AILab from "./components/AILab";
-import Products from "./components/Products";
 import Tasks from "./components/Tasks";
 import PrayerWall from "./components/PrayerWall";
 import Resources from "./components/Resources";
@@ -105,8 +104,6 @@ function AppContent() {
         return <Attendance />;
       case "ai-lab":
         return <AILab />;
-      case "products":
-        return <Products />;
       case "tasks":
         return <Tasks />;
       case "prayer-wall":

@@ -120,14 +120,13 @@ export default function Layout({ children, onTabChange, activeTab }: { children:
     { id: "ai-lab", icon: Sparkles, label: "AI Content Lab", category: "Resources" },
     { id: "donations", icon: Heart, label: "Giving", category: "Finance" },
     { id: "giving-goals", icon: Target, label: "Giving Goals", category: "Finance" },
-    { id: "products", icon: ShoppingBag, label: "Momoh Beauty", category: "Finance" },
+    { id: "tasks", icon: ClipboardList, label: "Tasks", category: "Engagement" },
     ...(role === 'admin' || role === 'pastor' || role === 'super_admin' ? [
       { id: "admin-settings", icon: Settings, label: "Settings", category: "System" },
       { id: "admin-roles", icon: ShieldCheck, label: "Roles", category: "System" },
       { id: "admin-system", icon: Server, label: "System Status", category: "System" },
       { id: "admin-audit", icon: History, label: "Audit Logs", category: "System" },
       { id: "reports", icon: FileText, label: "Reports", category: "System" },
-      { id: "tasks", icon: ClipboardList, label: "Tasks", category: "System" },
     ] : []),
   ];
 
@@ -237,7 +236,7 @@ export default function Layout({ children, onTabChange, activeTab }: { children:
           )}
         </div>
 
-        <ScrollArea className="flex-1 px-4">
+        <div className="flex-1 px-4 overflow-y-auto scrollbar-hide">
           <div className="space-y-6 py-4">
             {categories.map(category => (
               <div key={category} className="space-y-1">
@@ -259,7 +258,7 @@ export default function Layout({ children, onTabChange, activeTab }: { children:
               </div>
             ))}
           </div>
-        </ScrollArea>
+        </div>
 
         <div className="p-4 border-t bg-muted/20">
           <div className={cn("flex items-center gap-3 mb-4", collapsed ? "justify-center" : "px-2")}>
@@ -307,7 +306,7 @@ export default function Layout({ children, onTabChange, activeTab }: { children:
                   <X className="w-5 h-5" />
                 </Button>
               </div>
-              <ScrollArea className="flex-1 px-4">
+              <div className="flex-1 px-4 overflow-y-auto scrollbar-hide">
                 <div className="space-y-6 py-6">
                   {categories.map(category => (
                     <div key={category} className="space-y-1">
@@ -329,7 +328,7 @@ export default function Layout({ children, onTabChange, activeTab }: { children:
                     </div>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
             </motion.aside>
           </>
         )}
