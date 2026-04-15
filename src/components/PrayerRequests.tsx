@@ -168,12 +168,12 @@ export default function PrayerRequests() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
           <Button 
             variant={statusFilter === 'all' ? 'default' : 'outline'} 
             size="sm" 
             onClick={() => setStatusFilter('all')}
-            className="rounded-xl text-[10px] font-bold uppercase tracking-widest h-11 px-6"
+            className="rounded-xl text-[10px] font-bold uppercase tracking-widest h-11 px-6 shrink-0"
           >
             All
           </Button>
@@ -181,7 +181,7 @@ export default function PrayerRequests() {
             variant={statusFilter === 'pending' ? 'default' : 'outline'} 
             size="sm" 
             onClick={() => setStatusFilter('pending')}
-            className="rounded-xl text-[10px] font-bold uppercase tracking-widest h-11 px-6"
+            className="rounded-xl text-[10px] font-bold uppercase tracking-widest h-11 px-6 shrink-0"
           >
             Pending
           </Button>
@@ -189,7 +189,7 @@ export default function PrayerRequests() {
             variant={statusFilter === 'answered' ? 'default' : 'outline'} 
             size="sm" 
             onClick={() => setStatusFilter('answered')}
-            className="rounded-xl text-[10px] font-bold uppercase tracking-widest h-11 px-6"
+            className="rounded-xl text-[10px] font-bold uppercase tracking-widest h-11 px-6 shrink-0"
           >
             Answered
           </Button>

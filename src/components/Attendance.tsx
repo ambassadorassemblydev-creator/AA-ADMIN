@@ -274,7 +274,7 @@ export default function Attendance() {
               <SelectContent>
                 {events.map(event => (
                   <SelectItem key={event.id} value={event.id}>
-                    {event.title} - {new Date(event.starts_at).toLocaleDateString()}
+                    {event.title} - {new Date(event.start_date).toLocaleDateString()}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -347,22 +347,22 @@ export default function Attendance() {
                 {filteredMembers.map((member) => {
                   const status = attendance[member.id] || 'absent';
                   return (
-                    <div key={member.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
+                    <div key={member.id} className="flex flex-col xs:flex-row xs:items-center justify-between p-4 hover:bg-muted/30 transition-colors gap-4">
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border">
+                        <Avatar className="h-10 w-10 border shrink-0">
                           <AvatarImage src={member.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.id}`} />
                           <AvatarFallback>{member.first_name?.[0]}{member.last_name?.[0]}</AvatarFallback>
                         </Avatar>
-                        <div>
-                          <p className="font-medium text-sm">{member.first_name} {member.last_name}</p>
-                          <p className="text-xs text-muted-foreground">{member.member_id || 'Member'}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{member.first_name} {member.last_name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{member.member_id || 'Member'}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 w-full xs:w-auto justify-end">
                         <Button
                           variant={status === 'present' ? 'default' : 'outline'}
                           size="sm"
-                          className={cn("h-8 rounded-full px-4 text-xs font-bold", status === 'present' && "bg-emerald-500 hover:bg-emerald-600")}
+                          className={cn("flex-1 xs:flex-none h-8 rounded-full px-4 text-xs font-bold", status === 'present' && "bg-emerald-500 hover:bg-emerald-600")}
                           onClick={() => handleStatusChange(member.id, 'present')}
                         >
                           Present
@@ -370,7 +370,7 @@ export default function Attendance() {
                         <Button
                           variant={status === 'excused' ? 'secondary' : 'outline'}
                           size="sm"
-                          className={cn("h-8 rounded-full px-4 text-xs font-bold", status === 'excused' && "bg-amber-500 text-white hover:bg-amber-600")}
+                          className={cn("flex-1 xs:flex-none h-8 rounded-full px-4 text-xs font-bold", status === 'excused' && "bg-amber-500 text-white hover:bg-amber-600")}
                           onClick={() => handleStatusChange(member.id, 'excused')}
                         >
                           Excused

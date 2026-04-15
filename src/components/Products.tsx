@@ -188,11 +188,11 @@ export default function Products() {
                     </td>
                     <td className="p-4 text-right">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger render={
                           <Button variant="ghost" size="icon" className="rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                             <MoreVertical className="w-4 h-4" />
                           </Button>
-                        </DropdownMenuTrigger>
+                        } />
                         <DropdownMenuContent align="end" className="w-40 rounded-xl">
                           <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-widest">Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />

@@ -104,28 +104,30 @@ export default function AdminControls({ defaultTab = "general" }: { defaultTab?:
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 lg:w-[750px] h-12 p-1 bg-muted/50 rounded-xl mb-8">
-          <TabsTrigger value="general" className="rounded-lg text-[10px] font-bold uppercase tracking-widest gap-2">
-            <Globe className="w-4 h-4" />
-            <span className="hidden sm:inline">General</span>
-          </TabsTrigger>
-          <TabsTrigger value="roles" className="rounded-lg text-[10px] font-bold uppercase tracking-widest gap-2">
-            <Shield className="w-4 h-4" />
-            <span className="hidden sm:inline">Roles</span>
-          </TabsTrigger>
-          <TabsTrigger value="theme" className="rounded-lg text-[10px] font-bold uppercase tracking-widest gap-2">
-            <Palette className="w-4 h-4" />
-            <span className="hidden sm:inline">Theme</span>
-          </TabsTrigger>
-          <TabsTrigger value="system" className="rounded-lg text-[10px] font-bold uppercase tracking-widest gap-2">
-            <Server className="w-4 h-4" />
-            <span className="hidden sm:inline">System</span>
-          </TabsTrigger>
-          <TabsTrigger value="audit" className="rounded-lg text-[10px] font-bold uppercase tracking-widest gap-2">
-            <History className="w-4 h-4" />
-            <span className="hidden sm:inline">Audit</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
+          <TabsList className="grid w-full grid-cols-5 lg:w-[750px] h-12 p-1 bg-muted/50 rounded-xl mb-4 sm:mb-8 min-w-[500px] sm:min-w-0">
+            <TabsTrigger value="general" className="rounded-lg text-[10px] font-bold uppercase tracking-widest gap-2">
+              <Globe className="w-4 h-4" />
+              <span className="hidden sm:inline">General</span>
+            </TabsTrigger>
+            <TabsTrigger value="roles" className="rounded-lg text-[10px] font-bold uppercase tracking-widest gap-2">
+              <Shield className="w-4 h-4" />
+              <span className="hidden sm:inline">Roles</span>
+            </TabsTrigger>
+            <TabsTrigger value="theme" className="rounded-lg text-[10px] font-bold uppercase tracking-widest gap-2">
+              <Palette className="w-4 h-4" />
+              <span className="hidden sm:inline">Theme</span>
+            </TabsTrigger>
+            <TabsTrigger value="system" className="rounded-lg text-[10px] font-bold uppercase tracking-widest gap-2">
+              <Server className="w-4 h-4" />
+              <span className="hidden sm:inline">System</span>
+            </TabsTrigger>
+            <TabsTrigger value="audit" className="rounded-lg text-[10px] font-bold uppercase tracking-widest gap-2">
+              <History className="w-4 h-4" />
+              <span className="hidden sm:inline">Audit</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="general">
           <div className="grid gap-6">

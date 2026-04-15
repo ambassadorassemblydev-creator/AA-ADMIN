@@ -29,7 +29,7 @@ const ministrySchema = z.object({
   name: z.string().min(2, "Name is required"),
   description: z.string().min(10, "Description is required"),
   leader_id: z.string().optional(),
-  category: z.string().optional(),
+  type: z.string().optional(),
   status: z.enum(["active", "inactive"]),
   meeting_time: z.string().optional(),
   location: z.string().optional(),
@@ -64,7 +64,7 @@ export default function MinistryForm({ initialData, type = "ministry", onSuccess
       name: "",
       description: "",
       status: "active",
-      category: type,
+      type: type,
     },
   });
 

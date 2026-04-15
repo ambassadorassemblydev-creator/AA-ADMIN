@@ -52,7 +52,7 @@ export default function Departments() {
     setLoading(true);
     try {
       let query = supabase
-        .from('departments')
+        .from('church_departments')
         .select(`
           *,
           leader:profiles!leader_id (
@@ -91,7 +91,7 @@ export default function Departments() {
     if (!confirm("Are you sure you want to delete this department?")) return;
     
     try {
-      const { error } = await supabase.from('departments').delete().eq('id', id);
+      const { error } = await supabase.from('church_departments').delete().eq('id', id);
       if (error) throw error;
       toast.success("Department deleted successfully");
       fetchDepartments();
@@ -108,12 +108,12 @@ export default function Departments() {
           <p className="text-muted-foreground">Internal functional units that support the church operations.</p>
         </div>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger asChild>
+          <DialogTrigger render={
             <Button className="shadow-lg shadow-primary/20 gap-2">
               <Plus className="w-4 h-4" />
               Create Department
             </Button>
-          </DialogTrigger>
+          } />
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Create New Department</DialogTitle>
@@ -194,11 +194,11 @@ export default function Departments() {
                         <Briefcase className="w-5 h-5" />
                       </div>
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger render={
                           <Button variant="ghost" size="icon" className="h-8 w-8">
                             <MoreVertical className="w-4 h-4" />
                           </Button>
-                        </DropdownMenuTrigger>
+                        } />
                         <DropdownMenuContent align="end" className="w-40">
                           <DropdownMenuItem onClick={() => setEditingDepartment(dept)}>
                             <Edit2 className="w-4 h-4 mr-2" /> Edit

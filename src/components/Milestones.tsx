@@ -53,15 +53,15 @@ export default function Milestones() {
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           <Tabs defaultValue="all" className="w-full">
-            <div className="flex items-center justify-between mb-6">
-              <TabsList className="bg-muted/20 p-1 rounded-2xl h-12 border border-border/50">
-                <TabsTrigger value="all" className="rounded-xl px-6 font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-sm">All</TabsTrigger>
-                <TabsTrigger value="birthdays" className="rounded-xl px-6 font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-sm">Birthdays</TabsTrigger>
-                <TabsTrigger value="anniversaries" className="rounded-xl px-6 font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-sm">Anniversaries</TabsTrigger>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <TabsList className="bg-muted/20 p-1 rounded-2xl h-12 border border-border/50 w-full sm:w-auto overflow-x-auto no-scrollbar">
+                <TabsTrigger value="all" className="flex-1 sm:flex-none rounded-xl px-6 font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-sm">All</TabsTrigger>
+                <TabsTrigger value="birthdays" className="flex-1 sm:flex-none rounded-xl px-6 font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-sm">Birthdays</TabsTrigger>
+                <TabsTrigger value="anniversaries" className="flex-1 sm:flex-none rounded-xl px-6 font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-sm">Anniversaries</TabsTrigger>
               </TabsList>
-              <div className="relative w-64">
+              <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input placeholder="Search members..." className="pl-10 h-11 rounded-2xl bg-card/50 backdrop-blur-xl border-none shadow-sm" />
+                <Input placeholder="Search members..." className="pl-10 h-11 rounded-2xl bg-card/50 backdrop-blur-xl border-none shadow-sm w-full" />
               </div>
             </div>
 
@@ -71,16 +71,16 @@ export default function Milestones() {
                   key={item.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="bg-card/50 backdrop-blur-xl p-4 rounded-3xl shadow-xl border border-border/50 flex items-center justify-between group hover:bg-muted/20 transition-all"
+                  className="bg-card/50 backdrop-blur-xl p-4 rounded-3xl shadow-xl border border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:bg-muted/20 transition-all"
                 >
                   <div className="flex items-center gap-4">
-                    <Avatar className="h-14 w-14 border-4 border-background shadow-lg">
+                    <Avatar className="h-12 w-12 sm:h-14 sm:w-14 border-4 border-background shadow-lg shrink-0">
                       <AvatarImage src={item.image} />
                       <AvatarFallback>{item.name[0]}</AvatarFallback>
                     </Avatar>
-                    <div>
-                      <h4 className="font-bold text-base">{item.name}</h4>
-                      <div className="flex items-center gap-2 mt-1">
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-base truncate">{item.name}</h4>
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
                         <Badge variant="outline" className={cn(
                           "border-none text-[8px] font-bold uppercase tracking-widest",
                           item.type === "Birthday" ? "bg-blue-500/10 text-blue-600" : "bg-purple-500/10 text-purple-600"
@@ -91,16 +91,19 @@ export default function Milestones() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary">
-                      <Mail className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary">
-                      <Phone className="w-4 h-4" />
-                    </Button>
-                    <Button className="rounded-xl h-10 px-4 font-bold uppercase tracking-widest text-[10px] gap-2 ml-2">
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary">
+                        <Mail className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary">
+                        <Phone className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <Button className="rounded-xl h-10 px-4 font-bold uppercase tracking-widest text-[10px] gap-2 flex-1 sm:flex-none">
                       <Gift className="w-4 h-4" />
-                      Send Gift
+                      <span className="hidden xs:inline">Send Gift</span>
+                      <span className="xs:hidden">Gift</span>
                     </Button>
                   </div>
                 </motion.div>

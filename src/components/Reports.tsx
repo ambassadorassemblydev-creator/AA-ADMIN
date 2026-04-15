@@ -147,14 +147,14 @@ export default function Reports() {
         <div className="lg:col-span-2 space-y-6">
           <Card className="border-none shadow-xl bg-card/50 backdrop-blur-xl rounded-3xl overflow-hidden">
             <CardHeader className="border-b border-border/50 bg-muted/20">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <CardTitle className="text-xl font-bold">Recent Reports</CardTitle>
                   <CardDescription className="text-[10px] font-bold uppercase tracking-widest">Download or share generated insights</CardDescription>
                 </div>
-                <div className="relative w-64">
+                <div className="relative w-full sm:w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="Search reports..." className="pl-10 h-10 rounded-xl bg-background/50 border-none" />
+                  <Input placeholder="Search reports..." className="pl-10 h-10 rounded-xl bg-background/50 border-none w-full" />
                 </div>
               </div>
             </CardHeader>

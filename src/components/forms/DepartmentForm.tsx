@@ -68,14 +68,14 @@ export default function DepartmentForm({ initialData, onSuccess, onCancel }: Dep
     try {
       if (initialData?.id) {
         const { error } = await supabase
-          .from("departments")
+          .from("church_departments")
           .update(values)
           .eq("id", initialData.id);
         if (error) throw error;
         toast.success("Department updated successfully");
       } else {
         const { error } = await supabase
-          .from("departments")
+          .from("church_departments")
           .insert([values]);
         if (error) throw error;
         toast.success("Department created successfully");

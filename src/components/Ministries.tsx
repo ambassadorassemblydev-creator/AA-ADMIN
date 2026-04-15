@@ -83,8 +83,8 @@ export default function Ministries({ type = "ministry" }: MinistriesProps) {
         query = query.eq('status', statusFilter);
       }
 
-      // Filter by type (using category as a proxy if type column doesn't exist yet)
-      query = query.eq('category', type);
+      // Filter by type (using type as a proxy if category column doesn't exist yet)
+      query = query.eq('type', type);
 
       const { data, error } = await query;
 
@@ -123,10 +123,12 @@ export default function Ministries({ type = "ministry" }: MinistriesProps) {
           <p className="text-muted-foreground">{description}</p>
         </div>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 shadow-lg shadow-primary/20">
-            <Plus className="w-4 h-4" />
-            Create {isDepartment ? 'Department' : 'Ministry'}
-          </DialogTrigger>
+          <DialogTrigger render={
+            <Button className="shadow-lg shadow-primary/20 gap-2">
+              <Plus className="w-4 h-4" />
+              Create {isDepartment ? 'Department' : 'Ministry'}
+            </Button>
+          } />
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Create New {isDepartment ? 'Department' : 'Ministry'}</DialogTitle>
@@ -244,7 +246,7 @@ export default function Ministries({ type = "ministry" }: MinistriesProps) {
                   <div className="absolute bottom-6 left-6 right-6">
                     <div className="space-y-2">
                       <Badge className="bg-primary/90 hover:bg-primary border-none shadow-lg uppercase tracking-widest text-[10px] font-bold">
-                        {ministry.category || 'Ministry'}
+                        {ministry.type || 'Ministry'}
                       </Badge>
                       <h3 className="text-3xl font-bold text-white tracking-tight">{ministry.name}</h3>
                     </div>

@@ -62,9 +62,9 @@ export default function Events() {
         .select('*');
 
       if (tab === "upcoming") {
-        query = query.gte('starts_at', new Date().toISOString()).order('starts_at', { ascending: true });
+        query = query.gte('start_date', new Date().toISOString()).order('start_date', { ascending: true });
       } else {
-        query = query.lt('starts_at', new Date().toISOString()).order('starts_at', { ascending: false });
+        query = query.lt('start_date', new Date().toISOString()).order('start_date', { ascending: false });
       }
 
       if (search) {
@@ -240,7 +240,7 @@ export default function Events() {
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-widest">
                         <Calendar className="w-3 h-3" />
-                        {event.starts_at ? new Date(event.starts_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBD'}
+                        {event.start_date ? new Date(event.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBD'}
                       </div>
                       {event.status === 'published' ? (
                         <Badge variant="outline" className="text-[9px] h-5 gap-1 border-emerald-500/20 text-emerald-600 bg-emerald-500/5 uppercase tracking-tighter">
@@ -262,7 +262,7 @@ export default function Events() {
                         <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
                           <Clock className="w-3.5 h-3.5" />
                         </div>
-                        {event.starts_at ? new Date(event.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'TBD'}
+                        {event.start_date ? new Date(event.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'TBD'}
                       </div>
                       <div className="flex items-center gap-2.5 text-xs font-medium text-muted-foreground">
                         <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
@@ -329,7 +329,7 @@ export default function Events() {
           <div className="space-y-8 py-4">
             {Object.entries(
               events.reduce((acc: any, event) => {
-                const month = new Date(event.starts_at).toLocaleString('default', { month: 'long', year: 'numeric' });
+                const month = new Date(event.start_date).toLocaleString('default', { month: 'long', year: 'numeric' });
                 if (!acc[month]) acc[month] = [];
                 acc[month].push(event);
                 return acc;
@@ -342,12 +342,12 @@ export default function Events() {
                     <div key={event.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-lg bg-background flex flex-col items-center justify-center text-primary shadow-sm">
-                          <span className="text-[10px] font-bold leading-none">{new Date(event.starts_at).getDate()}</span>
-                          <span className="text-[8px] font-medium uppercase">{new Date(event.starts_at).toLocaleString('default', { weekday: 'short' })}</span>
+                          <span className="text-[10px] font-bold leading-none">{new Date(event.start_date).getDate()}</span>
+                          <span className="text-[8px] font-medium uppercase">{new Date(event.start_date).toLocaleString('default', { weekday: 'short' })}</span>
                         </div>
                         <div>
                           <p className="text-sm font-bold">{event.title}</p>
-                          <p className="text-[10px] text-muted-foreground">{new Date(event.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {event.location}</p>
+                          <p className="text-[10px] text-muted-foreground">{new Date(event.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {event.location}</p>
                         </div>
                       </div>
                       <Badge variant="outline" className="text-[8px] uppercase tracking-tighter">{event.category || 'General'}</Badge>
