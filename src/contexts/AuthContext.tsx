@@ -89,7 +89,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Fetch from user_roles -> roles table as per the system RBAC
       const rolePromise = supabase
         .from('user_roles')
-        .select('roles(name)')
+        .select(`
+          role_id,
+          roles:role_id (
+            name
+          )
+        `)
         .eq('user_id', userId)
         .eq('is_active', true)
         .single();
@@ -107,7 +112,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       if (result.data?.roles) {
-        setRole((result.data.roles as any).name.toLowerCase() as Role);
+        // Handle both object and array response from supabase
+        const roleData = Array.isArray(result.data.roles) ? result.data.roles[0] : result.data.roles;
+        setRole(roleData.name.toLowerCase() as Role);
       } else {
         setRole("member");
       }
