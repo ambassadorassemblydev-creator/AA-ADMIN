@@ -285,14 +285,14 @@ export default function Layout({ children, onTabChange, activeTab }: { children:
               onClick={() => setMobileOpen(false)}
               className="fixed inset-0 bg-black/60 backdrop-blur-md z-40 md:hidden"
             />
-            <motion.aside
+              <motion.aside
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 w-80 bg-card z-50 md:hidden shadow-2xl border-r"
+              className="fixed inset-y-0 left-0 w-80 bg-card z-50 md:hidden shadow-2xl border-r flex flex-col h-full"
             >
-              <div className="p-6 flex items-center justify-between border-b">
+              <div className="p-6 flex items-center justify-between border-b shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
                     <ShieldCheck className="w-6 h-6 text-primary-foreground" />
