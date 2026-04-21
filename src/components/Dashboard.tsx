@@ -40,8 +40,10 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/src/lib/utils";
 import { supabase } from "@/src/lib/supabase";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
-const data = [
+const chartData = [
   { name: "Mon", attendance: 45, giving: 1200 },
   { name: "Tue", attendance: 52, giving: 900 },
   { name: "Wed", attendance: 85, giving: 2100 },
@@ -51,7 +53,17 @@ const data = [
   { name: "Sun", attendance: 450, giving: 8900 },
 ];
 
-const StatCard = ({ title, value, icon: Icon, description, trend, trendValue, color }: any) => (
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+  description: string;
+  trend?: "up" | "down";
+  trendValue?: string;
+  color?: string;
+}
+
+const StatCard = ({ title, value, icon: Icon, description, trend, trendValue, color }: StatCardProps) => (
   <motion.div
     whileHover={{ y: -5 }}
     transition={{ type: "spring", stiffness: 300 }}
@@ -87,6 +99,28 @@ interface DashboardProps {
   onTabChange?: (tab: string) => void;
 }
 
+interface ActivityItem {
+  icon: React.ElementType;
+  color: string;
+  title: string;
+  time: string;
+  desc: string;
+}
+
+interface EventItem {
+  id: string;
+  title: string;
+  start_date: string;
+  location_name?: string | null;
+  cover_image_url?: string | null;
+}
+
+interface ChartDataItem {
+  name: string;
+  giving: number;
+  attendance: number;
+}
+
 export default function Dashboard({ onTabChange }: DashboardProps) {
   const { user, role, loading: authLoading } = useAuth();
   const [stats, setStats] = React.useState({
@@ -96,9 +130,9 @@ export default function Dashboard({ onTabChange }: DashboardProps) {
     ministries: 0,
     departments: 0
   });
-  const [upcomingEvents, setUpcomingEvents] = React.useState<any[]>([]);
-  const [recentActivity, setRecentActivity] = React.useState<any[]>([]);
-  const [chartData, setChartData] = React.useState<any[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = React.useState<EventItem[]>([]);
+  const [recentActivity, setRecentActivity] = React.useState<ActivityItem[]>([]);
+  const [chartData, setChartData] = React.useState<ChartDataItem[]>([]);
   const [ministryDistribution, setMinistryDistribution] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -118,10 +152,10 @@ export default function Dashboard({ onTabChange }: DashboardProps) {
         ] = await Promise.all([
           supabase.from('profiles').select('*', { count: 'exact', head: true }),
           supabase.from('donations').select('amount'),
-          supabase.from('ministries').select('*', { count: 'exact', head: true }).eq('category', 'ministry'),
-          supabase.from('departments').select('*', { count: 'exact', head: true }),
+          supabase.from('ministries').select('*', { count: 'exact', head: true }),
+          supabase.from('church_departments').select('*', { count: 'exact', head: true }),
           supabase.from('attendance_records').select('*', { count: 'exact', head: true }),
-          supabase.from('events').select('*').gte('start_time', new Date().toISOString()).order('start_time', { ascending: true }).limit(3)
+          supabase.from('events').select('*').gte('start_date', new Date().toISOString().split('T')[0]).order('start_date', { ascending: true }).limit(3)
         ]);
 
         const totalGiving = givingData?.reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0;
@@ -154,28 +188,28 @@ export default function Dashboard({ onTabChange }: DashboardProps) {
             icon: CheckCircle2, 
             color: "bg-emerald-500/10 text-emerald-600", 
             title: "New Member", 
-            time: new Date(m.created_at).toLocaleDateString(), 
+            time: m.created_at ? new Date(m.created_at).toLocaleDateString() : 'Today', 
             desc: `${m.first_name} ${m.last_name} registered` 
           })) || []),
           ...(recentSermons?.map(s => ({ 
             icon: Clock, 
             color: "bg-amber-500/10 text-amber-600", 
             title: "Sermon Uploaded", 
-            time: new Date(s.created_at).toLocaleDateString(), 
+            time: s.created_at ? new Date(s.created_at).toLocaleDateString() : 'Today', 
             desc: s.title 
           })) || []),
           ...(recentDonations?.map(d => ({ 
             icon: Heart, 
             color: "bg-rose-500/10 text-rose-600", 
             title: "Donation", 
-            time: new Date(d.created_at).toLocaleDateString(), 
-            desc: `£${d.amount} from ${d.donor_name || 'Anonymous'}` 
+            time: d.created_at ? new Date(d.created_at).toLocaleDateString() : 'Today', 
+            desc: `₦${d.amount || 0} from ${d.donor_name || 'Anonymous'}` 
           })) || []),
           ...(recentPrayers?.map(p => ({ 
             icon: MessageSquare, 
             color: "bg-blue-500/10 text-blue-600", 
             title: "Prayer Request", 
-            time: new Date(p.created_at).toLocaleDateString(), 
+            time: p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Today', 
             desc: p.title 
           })) || [])
         ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5);
@@ -204,9 +238,9 @@ export default function Dashboard({ onTabChange }: DashboardProps) {
         ]);
 
         const chart = last7Days.map(date => {
-          const dayGiving = dailyGiving?.filter(d => d.created_at.startsWith(date))
+          const dayGiving = dailyGiving?.filter(d => d.created_at?.startsWith(date))
             .reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0;
-          const dayGrowth = dailyGrowth?.filter(d => d.created_at.startsWith(date)).length || 0;
+          const dayGrowth = dailyGrowth?.filter(d => d.created_at?.startsWith(date)).length || 0;
           
           return {
             name: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
@@ -322,7 +356,7 @@ export default function Dashboard({ onTabChange }: DashboardProps) {
         />
         <StatCard 
           title="Total Giving" 
-          value={loading ? "..." : `£${stats.giving.toLocaleString()}`} 
+          value={loading ? "..." : `₦${stats.giving.toLocaleString()}`} 
           icon={Heart} 
           description="Total donations received" 
           trend="up" 
@@ -389,7 +423,7 @@ export default function Dashboard({ onTabChange }: DashboardProps) {
           <CardContent className="pl-2">
             <div className="h-[350px] w-full min-h-[350px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData.length > 0 ? chartData : data}>
+                <AreaChart data={chartData.length > 0 ? chartData : chartData}>
                   <defs>
                     <linearGradient id="colorAttendance" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
@@ -440,7 +474,17 @@ export default function Dashboard({ onTabChange }: DashboardProps) {
           <CardContent className="flex-1">
             <div className="space-y-6">
               {recentActivity.length > 0 ? recentActivity.map((item, i) => (
-                <div key={i} className="flex gap-4 group cursor-pointer">
+                <div 
+                  key={i} 
+                  className="flex gap-4 group cursor-pointer"
+                  onClick={() => {
+                    if (item.title === "New Member") onTabChange?.("members");
+                    else if (item.title === "Sermon Uploaded") onTabChange?.("sermons");
+                    else if (item.title === "New Donation") onTabChange?.("donations");
+                    else if (item.title === "Prayer Request") onTabChange?.("prayers");
+                    else if (item.title === "Admin Action") onTabChange?.("admin-audit");
+                  }}
+                >
                   <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110", item.color)}>
                     <item.icon className="w-5 h-5" />
                   </div>
@@ -461,7 +505,11 @@ export default function Dashboard({ onTabChange }: DashboardProps) {
             </div>
           </CardContent>
           <CardFooter className="p-6 pt-0">
-            <Button variant="ghost" className="w-full justify-between group/btn px-0 hover:bg-transparent">
+            <Button 
+              variant="ghost" 
+              className="w-full justify-between group/btn px-0 hover:bg-transparent"
+              onClick={() => onTabChange?.("admin-audit")}
+            >
               <span className="text-xs font-bold uppercase tracking-widest">View Full Audit Log</span>
               <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
             </Button>
@@ -520,12 +568,12 @@ export default function Dashboard({ onTabChange }: DashboardProps) {
                   className="flex items-center gap-3 p-3 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer group"
                 >
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex flex-col items-center justify-center text-primary shrink-0">
-                    <span className="text-[10px] font-black leading-none">{new Date(event.start_time).toLocaleString('en-US', { month: 'short' }).toUpperCase()}</span>
-                    <span className="text-sm font-bold leading-none">{new Date(event.start_time).getDate()}</span>
+                    <span className="text-[10px] font-black leading-none">{new Date(event.start_date).toLocaleString('en-US', { month: 'short' }).toUpperCase()}</span>
+                    <span className="text-sm font-bold leading-none">{new Date(event.start_date).getDate()}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold truncate group-hover:text-primary transition-colors">{event.title}</p>
-                    <p className="text-[10px] text-muted-foreground font-medium">{new Date(event.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {event.location || 'Church Hall'}</p>
+                    <p className="text-[10px] text-muted-foreground font-medium">{event.location_name || 'Church Hall'}</p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
                 </div>
@@ -552,7 +600,7 @@ export default function Dashboard({ onTabChange }: DashboardProps) {
             </div>
             <div className="space-y-1">
               <h3 className="text-xl font-bold">Giving Goal</h3>
-              <p className="text-sm text-muted-foreground">You're £2,500 away from your monthly mission goal.</p>
+              <p className="text-sm text-muted-foreground">You're ₦2,500 away from your monthly mission goal.</p>
             </div>
             <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
               <motion.div 

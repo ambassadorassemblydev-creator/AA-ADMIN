@@ -51,7 +51,7 @@ const profileSchema = z.object({
   last_name: z.string().min(2, "Last name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   phone: z.string().optional(),
-  address: z.string().optional(),
+  address_line_1: z.string().optional(),
   bio: z.string().max(500).optional(),
 });
 
@@ -85,7 +85,7 @@ export default function ProfileSettings() {
         last_name: data.last_name || "",
         email: user.email || "",
         phone: data.phone || "",
-        address: data.address || "",
+        address_line_1: data.address_line_1 || "",
         bio: data.bio || "",
       });
     } catch (error: any) {
@@ -106,6 +106,7 @@ export default function ProfileSettings() {
   }, [user, authLoading]);
 
   const onSubmit = async (data: any) => {
+    if (!user) return;
     setSaving(true);
     try {
       const { error } = await supabase
@@ -125,7 +126,7 @@ export default function ProfileSettings() {
 
   const calculateCompleteness = () => {
     if (!profile) return 0;
-    const fields = ['first_name', 'last_name', 'phone', 'address', 'bio', 'avatar_url'];
+    const fields = ['first_name', 'last_name', 'phone', 'address_line_1', 'bio', 'avatar_url'];
     const filled = fields.filter(f => !!profile[f]).length;
     return Math.round((filled / fields.length) * 100);
   };
@@ -252,7 +253,7 @@ export default function ProfileSettings() {
                     <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Home Address</Label>
                     <div className="relative">
                       <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input className="h-11 pl-11 rounded-xl bg-background/50 border-none" {...register("address")} />
+                      <Input className="h-11 pl-11 rounded-xl bg-background/50 border-none" {...register("address_line_1")} />
                     </div>
                   </div>
                 </div>

@@ -50,11 +50,29 @@ import { cn } from "@/src/lib/utils";
 
 import { useAuth } from "@/src/contexts/AuthContext";
 
+interface AuditLog {
+  id: string;
+  action: string;
+  actor_id: string | null;
+  actor_email?: string | null;
+  description: string | null;
+  details?: any;
+  created_at: string | null;
+}
+
+interface Role {
+  id: string;
+  name: string;
+  description: string | null;
+  permissions?: any;
+  created_at: string | null;
+}
+
 export default function AdminControls({ defaultTab = "general" }: { defaultTab?: string }) {
   const { loading: authLoading } = useAuth();
   const [loading, setLoading] = React.useState(true);
-  const [auditLogs, setAuditLogs] = React.useState<any[]>([]);
-  const [roles, setRoles] = React.useState<any[]>([]);
+  const [auditLogs, setAuditLogs] = React.useState<AuditLog[]>([]);
+  const [roles, setRoles] = React.useState<Role[]>([]);
   const [activeTab, setActiveTab] = React.useState(defaultTab);
 
   const fetchAdminData = async (retries = 3) => {
@@ -454,12 +472,12 @@ export default function AdminControls({ defaultTab = "general" }: { defaultTab?:
                         </div>
                         <div className="space-y-0.5">
                           <p className="text-sm font-bold">{log.action}</p>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{log.user_id}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{log.actor_email || log.actor_id || 'System'}</p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                          {new Date(log.created_at).toLocaleString()}
+                          {log.created_at ? new Date(log.created_at).toLocaleString() : 'N/A'}
                         </p>
                       </div>
                     </div>

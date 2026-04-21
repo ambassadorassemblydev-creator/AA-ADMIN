@@ -41,11 +41,12 @@ import { supabase } from "@/src/lib/supabase";
 import EventForm from "./forms/EventForm";
 import { toast } from "sonner";
 import { cn } from "@/src/lib/utils";
+import { auditRepo } from "@/src/lib/audit";
 
 import { useAuth } from "@/src/contexts/AuthContext";
 
 export default function Events() {
-  const { loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [events, setEvents] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
@@ -99,6 +100,15 @@ export default function Events() {
     try {
       const { error } = await supabase.from('events').delete().eq('id', id);
       if (error) throw error;
+
+      // Log delete action
+      await auditRepo.logAction({
+        admin_id: user?.id || 'unknown',
+        action: 'DELETE',
+        table_name: 'events',
+        record_id: id
+      });
+
       toast.success("Event deleted successfully");
       fetchEvents();
     } catch (error: any) {
@@ -210,7 +220,19 @@ export default function Events() {
                       <DropdownMenuItem onClick={() => setEditingEvent(event)}>
                         <Edit2 className="w-4 h-4 mr-2" /> Edit Event
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => {
+                        const url = `${window.location.origin}/events/${event.id}`;
+                        navigator.clipboard.writeText(url);
+                        toast.success("Event link copied to clipboard");
+                        
+                        auditRepo.logAction({
+                          admin_id: user?.id || 'unknown',
+                          action: 'UPDATE',
+                          table_name: 'events',
+                          record_id: event.id,
+                          new_values: { action: 'share_event' }
+                        });
+                      }}>
                         <Share2 className="w-4 h-4 mr-2" /> Share Event
                       </DropdownMenuItem>
                       <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-destructive-foreground" onClick={() => handleDelete(event.id)}>

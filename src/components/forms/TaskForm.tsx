@@ -44,12 +44,13 @@ type TaskFormValues = z.infer<typeof taskSchema>;
 
 interface TaskFormProps {
   initialData?: any;
+  workers: any[];
   onSubmit: (data: TaskFormValues) => void;
   onCancel: () => void;
   loading?: boolean;
 }
 
-export default function TaskForm({ initialData, onSubmit, onCancel, loading }: TaskFormProps) {
+export default function TaskForm({ initialData, workers, onSubmit, onCancel, loading }: TaskFormProps) {
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
@@ -155,9 +156,20 @@ export default function TaskForm({ initialData, onSubmit, onCancel, loading }: T
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Assignee</FormLabel>
-                <FormControl>
-                  <Input placeholder="Name" className="rounded-xl h-11 bg-muted/30 border-none" {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="rounded-xl h-11 bg-muted/30 border-none">
+                      <SelectValue placeholder="Select worker" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="rounded-xl">
+                    {workers.map((worker) => (
+                      <SelectItem key={worker.id} value={worker.user_id}>
+                        {worker.profiles.first_name} {worker.profiles.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

@@ -25,11 +25,18 @@ import { toast } from "sonner";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+interface AIHistoryItem {
+  type: string;
+  prompt: string;
+  result: string;
+  date: Date;
+}
+
 export default function AILab() {
   const [prompt, setPrompt] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState("");
-  const [history, setHistory] = React.useState<any[]>([]);
+  const [history, setHistory] = React.useState<AIHistoryItem[]>([]);
   const [activeTab, setActiveTab] = React.useState("sermon");
 
   const generateContent = async (type: string) => {

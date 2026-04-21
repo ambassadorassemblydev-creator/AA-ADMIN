@@ -110,6 +110,7 @@ export default function Layout({ children, onTabChange, activeTab }: { children:
     { id: "ministries", icon: ShieldCheck, label: "Ministries", category: "Community" },
     { id: "departments", icon: Building2, label: "Departments", category: "Community" },
     { id: "volunteers", icon: Heart, label: "Volunteers", category: "Community" },
+    { id: "master-rota", icon: ClipboardList, label: "Master Rota", category: "Community" },
     { id: "events", icon: Calendar, label: "Events", category: "Engagement" },
     { id: "attendance", icon: CheckCircle2, label: "Attendance", category: "Engagement" },
     { id: "prayer-wall", icon: MessageSquare, label: "Prayer Wall", category: "Engagement" },

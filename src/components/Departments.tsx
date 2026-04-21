@@ -11,7 +11,8 @@ import {
   UserPlus,
   Activity,
   Target,
-  Briefcase
+  Briefcase,
+  Share2
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,8 +40,11 @@ import { supabase } from "@/src/lib/supabase";
 import DepartmentForm from "./forms/DepartmentForm";
 import { toast } from "sonner";
 import { cn } from "@/src/lib/utils";
+import { auditRepo } from "@/src/lib/audit";
+import { useAuth } from "@/src/contexts/AuthContext";
 
-export default function Departments() {
+export default function Departments({ onTabChange }: { onTabChange?: (tab: string) => void }) {
+  const { user } = useAuth();
   const [departments, setDepartments] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
@@ -68,7 +72,7 @@ export default function Departments() {
       }
 
       if (statusFilter !== "all") {
-        query = query.eq('status', statusFilter);
+        query = query.eq('is_active', statusFilter === 'active');
       }
 
       const { data, error } = await query;
@@ -93,6 +97,15 @@ export default function Departments() {
     try {
       const { error } = await supabase.from('church_departments').delete().eq('id', id);
       if (error) throw error;
+
+      // Log delete action
+      await auditRepo.logAction({
+        admin_id: user?.id || 'unknown',
+        action: 'DELETE',
+        table_name: 'church_departments',
+        record_id: id
+      });
+
       toast.success("Department deleted successfully");
       fetchDepartments();
     } catch (error: any) {
@@ -206,6 +219,21 @@ export default function Departments() {
                           <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(dept.id)}>
                             <Trash2 className="w-4 h-4 mr-2" /> Delete
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            const url = `${window.location.origin}/departments/${dept.id}`;
+                            navigator.clipboard.writeText(url);
+                            toast.success("Department link copied to clipboard");
+                            
+                            auditRepo.logAction({
+                              admin_id: user?.id || 'unknown',
+                              action: 'UPDATE',
+                              table_name: 'church_departments',
+                              record_id: dept.id,
+                              new_values: { action: 'share_department' }
+                            });
+                          }}>
+                            <Share2 className="w-4 h-4 mr-2" /> Share Department
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -228,8 +256,8 @@ export default function Departments() {
                           <Activity className="w-4 h-4" />
                           <span>Status</span>
                         </div>
-                        <Badge variant={dept.status === 'active' ? 'default' : 'secondary'} className="capitalize">
-                          {dept.status}
+                        <Badge variant={dept.is_active ? 'default' : 'secondary'} className="capitalize">
+                          {dept.is_active ? 'Active' : 'Inactive'}
                         </Badge>
                       </div>
                     </div>
@@ -249,7 +277,12 @@ export default function Departments() {
                         <span className="text-[10px] text-muted-foreground uppercase tracking-tighter">Department Lead</span>
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm" className="text-xs font-bold uppercase tracking-widest text-primary hover:bg-primary/10">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-xs font-bold uppercase tracking-widest text-primary hover:bg-primary/10"
+                      onClick={() => onTabChange?.("members")}
+                    >
                       View Details
                     </Button>
                   </CardFooter>

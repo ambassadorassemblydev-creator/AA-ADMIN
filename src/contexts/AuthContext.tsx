@@ -1,6 +1,6 @@
 import * as React from "react";
 import { supabase } from "@/src/lib/supabase";
-import { Session, User } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 
 type Role = "super_admin" | "admin" | "pastor" | "leader" | "member" | "guest";
 
@@ -8,21 +8,31 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   role: Role | null;
+  permissions: Record<string, boolean>;
   loading: boolean;
+  hasPermission: (permission: string) => boolean;
 }
 
 const AuthContext = React.createContext<AuthContextType>({
   session: null,
   user: null,
   role: null,
+  permissions: {},
   loading: true,
+  hasPermission: () => false,
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = React.useState<Session | null>(null);
   const [user, setUser] = React.useState<User | null>(null);
   const [role, setRole] = React.useState<Role | null>(null);
+  const [permissions, setPermissions] = React.useState<Record<string, boolean>>({});
   const [loading, setLoading] = React.useState(true);
+
+  const hasPermission = (permission: string) => {
+    if (role === 'super_admin' || permissions['all']) return true;
+    return !!permissions[permission];
+  };
 
   React.useEffect(() => {
     let mounted = true;
@@ -111,12 +121,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      if (result.data?.roles) {
+      if (result.data && result.data.roles) {
         // Handle both object and array response from supabase
         const roleData = Array.isArray(result.data.roles) ? result.data.roles[0] : result.data.roles;
         setRole(roleData.name.toLowerCase() as Role);
+        setPermissions(roleData.permissions || {});
       } else {
         setRole("member");
+        setPermissions({});
       }
     } catch (err) {
       console.warn('Role fetch failed or timed out, defaulting to member:', err);
@@ -127,7 +139,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, role, loading }}>
+    <AuthContext.Provider value={{ session, user, role, permissions, loading, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

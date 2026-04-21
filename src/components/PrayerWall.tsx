@@ -19,27 +19,82 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
+import { supabase } from "@/src/lib/supabase";
+import type { Database } from "@/src/types/database.types";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/src/lib/utils";
 
-const MOCK_PRAYERS = [
-  { id: 1, author: "Sister Mary", content: "Praying for my family's health and strength during this season. God is faithful!", category: "Family", prayers: 24, time: "2h ago" },
-  { id: 2, author: "Brother David", content: "Seeking guidance for a new business venture. May His will be done.", category: "Guidance", prayers: 12, time: "5h ago" },
-  { id: 3, author: "Sarah Johnson", content: "Praise report! My son's surgery was successful. Thank you for your prayers.", category: "Praise", prayers: 45, time: "1d ago" },
-  { id: 4, author: "Admin", content: "Praying for our upcoming Sunday service and all the workers involved.", category: "Church", prayers: 18, time: "3h ago" },
-];
+type PrayerRequest = Database["public"]["Tables"]["prayer_requests"]["Row"] & {
+  profiles: {
+    first_name: string | null;
+    last_name: string | null;
+    avatar_url: string | null;
+  } | null;
+};
+
 
 export default function PrayerWall() {
-  const [prayedIds, setPrayedIds] = React.useState<Set<number>>(new Set());
+  const [prayers, setPrayers] = React.useState<PrayerRequest[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [search, setSearch] = React.useState("");
+  const [categoryFilter, setCategoryFilter] = React.useState("All Requests");
+  const [prayedIds, setPrayedIds] = React.useState<Set<string>>(new Set());
 
-  const togglePray = (id: number) => {
+  const fetchPrayers = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('prayer_requests')
+        .select(`
+          *,
+          profiles:profiles!prayer_requests_user_id_fkey (
+            first_name,
+            last_name,
+            avatar_url
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPrayers(data || []);
+    } catch (error) {
+      console.error("Error fetching prayers:", error);
+      toast.error("Failed to load prayer requests");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchPrayers();
+  }, []);
+
+  const togglePray = (id: string) => {
     const newSet = new Set(prayedIds);
     if (newSet.has(id)) {
       newSet.delete(id);
     } else {
       newSet.add(id);
-      toast.success("You've joined in prayer!");
+      toast.success("Joined in prayer!");
     }
     setPrayedIds(newSet);
   };
+
+  const filteredPrayers = prayers.filter(p => {
+    const name = p.profiles ? `${p.profiles.first_name} ${p.profiles.last_name}` : "Member";
+    const matchesSearch = p.description?.toLowerCase().includes(search.toLowerCase()) ||
+                         name.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = categoryFilter === "All Requests" || p.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -67,14 +122,20 @@ export default function PrayerWall() {
               <CardDescription className="text-[10px] font-bold uppercase tracking-widest">Filter by prayer type</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              {["All Requests", "Family", "Healing", "Guidance", "Praise", "Church"].map((cat) => (
+              {["All Requests", "Family", "Healing", "Guidance", "Praise", "General"].map((cat) => (
                 <Button 
                   key={cat} 
-                  variant="ghost" 
-                  className="w-full justify-between rounded-xl h-11 px-4 font-bold text-xs hover:bg-primary/10 hover:text-primary transition-all group"
+                  variant={categoryFilter === cat ? "default" : "ghost"} 
+                  className="w-full justify-between rounded-xl h-11 px-4 font-bold text-xs transition-all group"
+                  onClick={() => setCategoryFilter(cat)}
                 >
                   {cat}
-                  <Badge variant="outline" className="bg-muted/50 border-none text-[8px] group-hover:bg-primary/20 transition-colors">12</Badge>
+                  <Badge variant="outline" className={cn(
+                    "bg-muted/50 border-none text-[8px] transition-colors",
+                    categoryFilter === cat ? "bg-white/20 text-white" : "group-hover:bg-primary/20"
+                  )}>
+                    {cat === "All Requests" ? prayers.length : prayers.filter(p => p.category === cat).length}
+                  </Badge>
                 </Button>
               ))}
             </CardContent>
@@ -105,67 +166,70 @@ export default function PrayerWall() {
           </div>
 
           <div className="grid gap-6">
-            {MOCK_PRAYERS.map((prayer) => (
-              <motion.div
-                key={prayer.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                whileHover={{ y: -4 }}
-                className="bg-card/50 backdrop-blur-xl p-6 rounded-3xl shadow-xl border border-border/50 group transition-all"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10 border-2 border-primary/20">
-                      <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${prayer.author}`} />
-                      <AvatarFallback>{prayer.author[0]}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h4 className="font-bold text-sm">{prayer.author}</h4>
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                        <Clock className="w-3 h-3" />
-                        {prayer.time}
+            {filteredPrayers.map((prayer) => {
+              const name = prayer.profiles ? `${prayer.profiles.first_name} ${prayer.profiles.last_name}` : "Member";
+              return (
+                <motion.div
+                  key={prayer.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ y: -4 }}
+                  className="bg-card/50 backdrop-blur-xl p-6 rounded-3xl shadow-xl border border-border/50 group transition-all"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 border-2 border-primary/20">
+                        <AvatarImage src={prayer.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`} />
+                        <AvatarFallback>{name[0]}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h4 className="font-bold text-sm">{name}</h4>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+                          <Clock className="w-3 h-3" />
+                          {new Date(prayer.created_at || '').toLocaleDateString()}
+                        </div>
                       </div>
                     </div>
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-none text-[8px] font-bold uppercase tracking-widest">
+                      {prayer.category}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-none text-[8px] font-bold uppercase tracking-widest">
-                    {prayer.category}
-                  </Badge>
-                </div>
 
-                <p className="text-sm font-medium leading-relaxed mb-6 text-foreground/80 italic">
-                  "{prayer.content}"
-                </p>
+                  <p className="text-sm font-medium leading-relaxed mb-6 text-foreground/80 italic">
+                    "{prayer.description}"
+                  </p>
 
-                <div className="flex items-center justify-between pt-4 border-t border-border/50">
-                  <div className="flex items-center gap-4">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className={cn(
-                        "rounded-xl gap-2 h-9 px-4 text-[10px] font-bold uppercase tracking-widest transition-all",
-                        prayedIds.has(prayer.id) ? "bg-primary text-primary-foreground" : "hover:bg-primary/10 hover:text-primary"
-                      )}
-                      onClick={() => togglePray(prayer.id)}
-                    >
-                      <Heart className={cn("w-4 h-4", prayedIds.has(prayer.id) && "fill-current")} />
-                      {prayedIds.has(prayer.id) ? "Prayed" : "I'm Praying"}
-                    </Button>
-                    <Button variant="ghost" size="sm" className="rounded-xl gap-2 h-9 px-4 text-[10px] font-bold uppercase tracking-widest hover:bg-muted/50">
-                      <MessageCircle className="w-4 h-4" />
-                      Encourage
-                    </Button>
+                  <div className="flex items-center justify-between pt-4 border-t border-border/50">
+                    <div className="flex items-center gap-4">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className={cn(
+                          "rounded-xl gap-2 h-9 px-4 text-[10px] font-bold uppercase tracking-widest transition-all",
+                          prayedIds.has(prayer.id) ? "bg-primary text-primary-foreground" : "hover:bg-primary/10 hover:text-primary"
+                        )}
+                        onClick={() => togglePray(prayer.id)}
+                      >
+                        <Heart className={cn("w-4 h-4", prayedIds.has(prayer.id) && "fill-current")} />
+                        {prayedIds.has(prayer.id) ? "Prayed" : "I'm Praying"}
+                      </Button>
+                      <Button variant="ghost" size="sm" className="rounded-xl gap-2 h-9 px-4 text-[10px] font-bold uppercase tracking-widest hover:bg-muted/50">
+                        <MessageCircle className="w-4 h-4" />
+                        Encourage
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                        {prayedIds.has(prayer.id) ? 1 : 0} Intercessors
+                      </span>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                        <Share2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      {prayer.prayers + (prayedIds.has(prayer.id) ? 1 : 0)} Intercessors
-                    </span>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                      <Share2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -173,6 +237,3 @@ export default function PrayerWall() {
   );
 }
 
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(" ");
-}

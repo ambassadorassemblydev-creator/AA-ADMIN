@@ -45,11 +45,12 @@ import { supabase } from "@/src/lib/supabase";
 import SermonForm from "./forms/SermonForm";
 import { toast } from "sonner";
 import { cn } from "@/src/lib/utils";
+import { auditRepo } from "@/src/lib/audit";
 
 import { useAuth } from "@/src/contexts/AuthContext";
 
 export default function Sermons() {
-  const { loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [sermons, setSermons] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
@@ -111,6 +112,15 @@ export default function Sermons() {
     try {
       const { error } = await supabase.from('sermons').delete().eq('id', id);
       if (error) throw error;
+
+      // Log delete action
+      await auditRepo.logAction({
+        admin_id: user?.id || 'unknown',
+        action: 'DELETE',
+        table_name: 'sermons',
+        record_id: id
+      });
+
       toast.success("Sermon deleted successfully");
       fetchSermons();
     } catch (error: any) {
@@ -128,6 +138,24 @@ export default function Sermons() {
       toast.success("Added to bookmarks");
     }
     setBookmarked(newBookmarks);
+  };
+
+  const handleDownload = (sermon: any) => {
+    if (sermon.pdf_url) {
+      window.open(sermon.pdf_url, '_blank');
+      toast.success("Opening sermon notes...");
+      
+      // Log download action
+      auditRepo.logAction({
+        admin_id: user?.id || 'unknown',
+        action: 'UPDATE',
+        table_name: 'sermons',
+        record_id: sermon.id,
+        new_values: { action: 'download_notes' }
+      });
+    } else {
+      toast.error("No notes available for this sermon");
+    }
   };
 
   return (
@@ -289,7 +317,7 @@ export default function Sermons() {
                       <DropdownMenuItem onClick={() => setEditingSermon(sermon)}>
                         <Edit2 className="w-4 h-4 mr-2" /> Edit Sermon
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDownload(sermon)}>
                         <Download className="w-4 h-4 mr-2" /> Download Notes
                       </DropdownMenuItem>
                       <DropdownMenuItem>

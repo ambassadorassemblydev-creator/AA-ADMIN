@@ -23,17 +23,65 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
+import { supabase } from "@/src/lib/supabase";
+import type { Database } from "@/src/types/database.types";
+import { Loader2 } from "lucide-react";
 
-const MOCK_RESOURCES = [
-  { id: 1, name: "Ambassadors Brand Guidelines 2026", type: "PDF", size: "4.2 MB", category: "Brand", date: "2026-03-15", access: "Public" },
-  { id: 2, name: "Sunday Service Stream Template", type: "Video", size: "128 MB", category: "Media", date: "2026-04-01", access: "Restricted" },
-  { id: 3, name: "Worship Team Rehearsal Audio", type: "Audio", size: "12 MB", category: "Worship", date: "2026-04-10", access: "Internal" },
-  { id: 4, name: "Ministry Outreach Flyer", type: "Image", size: "2.1 MB", category: "Outreach", date: "2026-04-12", access: "Public" },
-  { id: 5, name: "Church Constitution v2.4", type: "PDF", size: "1.5 MB", category: "Admin", date: "2026-01-20", access: "Restricted" },
-];
+type Resource = Database["public"]["Tables"]["resources"]["Row"];
+
 
 export default function Resources() {
   const [view, setView] = React.useState<"grid" | "list">("grid");
+  const [resources, setResources] = React.useState<Resource[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [search, setSearch] = React.useState("");
+  const [categoryFilter, setCategoryFilter] = React.useState("All Assets");
+
+  const fetchResources = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('resources')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setResources(data || []);
+    } catch (error) {
+      console.error("Error fetching resources:", error);
+      toast.error("Failed to load resources");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchResources();
+  }, []);
+
+  const filteredResources = resources.filter(r => {
+    const matchesSearch = r.name.toLowerCase().includes(search.toLowerCase()) ||
+                         r.category?.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = categoryFilter === "All Assets" || r.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  const getIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'pdf': return FileText;
+      case 'video': return Video;
+      case 'audio': return Music;
+      default: return Folder;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -99,12 +147,13 @@ export default function Resources() {
                 { label: "Documents", icon: FileText },
                 { label: "Videos", icon: Video },
                 { label: "Audio", icon: Music },
-                { label: "Recent", icon: Clock },
+                { label: "Files", icon: Folder },
               ].map((item) => (
                 <Button 
                   key={item.label} 
-                  variant="ghost" 
-                  className="w-full justify-start gap-3 rounded-xl h-11 px-4 font-bold text-xs hover:bg-primary/10 hover:text-primary transition-all"
+                  variant={categoryFilter === item.label ? "default" : "ghost"} 
+                  className="w-full justify-start gap-3 rounded-xl h-11 px-4 font-bold text-xs transition-all"
+                  onClick={() => setCategoryFilter(item.label)}
                 >
                   <item.icon className="w-4 h-4" />
                   {item.label}
@@ -118,7 +167,12 @@ export default function Resources() {
           <div className="flex items-center justify-between gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Search resources..." className="pl-10 h-12 rounded-2xl bg-card/50 backdrop-blur-xl border-none shadow-sm" />
+              <Input 
+                placeholder="Search resources..." 
+                className="pl-10 h-12 rounded-2xl bg-card/50 backdrop-blur-xl border-none shadow-sm" 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
             <div className="flex items-center bg-card/50 backdrop-blur-xl p-1 rounded-2xl shadow-sm border border-border/50">
               <Button 
@@ -144,61 +198,61 @@ export default function Resources() {
             "grid gap-4",
             view === "grid" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
           )}>
-            {MOCK_RESOURCES.map((file) => (
-              <motion.div
-                key={file.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ y: -4 }}
-                className={cn(
-                  "bg-card/50 backdrop-blur-xl rounded-3xl shadow-xl border border-border/50 group transition-all overflow-hidden",
-                  view === "list" ? "flex items-center p-4 gap-4" : "p-6"
-                )}
-              >
-                <div className={cn(
-                  "rounded-2xl flex items-center justify-center shrink-0",
-                  file.type === "PDF" ? "bg-red-500/10 text-red-600" :
-                  file.type === "Video" ? "bg-blue-500/10 text-blue-600" :
-                  file.type === "Audio" ? "bg-amber-500/10 text-amber-600" :
-                  "bg-purple-500/10 text-purple-600",
-                  view === "list" ? "w-12 h-12" : "w-16 h-16 mb-4"
-                )}>
-                  {file.type === "PDF" ? <FileText className="w-8 h-8" /> :
-                   file.type === "Video" ? <Video className="w-8 h-8" /> :
-                   file.type === "Audio" ? <Music className="w-8 h-8" /> :
-                   <Library className="w-8 h-8" />}
-                </div>
+            {filteredResources.map((file) => {
+              const Icon = getIcon(file.type);
+              return (
+                <motion.div
+                  key={file.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  whileHover={{ y: -4 }}
+                  className={cn(
+                    "bg-card/50 backdrop-blur-xl rounded-3xl shadow-xl border border-border/50 group transition-all overflow-hidden",
+                    view === "list" ? "flex items-center p-4 gap-4" : "p-6"
+                  )}
+                >
+                  <div className={cn(
+                    "rounded-2xl flex items-center justify-center shrink-0",
+                    file.type === "PDF" ? "bg-red-500/10 text-red-600" :
+                    file.type === "Video" ? "bg-blue-500/10 text-blue-600" :
+                    file.type === "Audio" ? "bg-amber-500/10 text-amber-600" :
+                    "bg-purple-500/10 text-purple-600",
+                    view === "list" ? "w-12 h-12" : "w-16 h-16 mb-4"
+                  )}>
+                    <Icon className="w-8 h-8" />
+                  </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-bold text-sm truncate">{file.name}</h4>
-                    {file.access === "Restricted" && <Lock className="w-3 h-3 text-muted-foreground" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-bold text-sm truncate">{file.name}</h4>
+                      {file.access_level === "Restricted" && <Lock className="w-3 h-3 text-muted-foreground" />}
+                    </div>
+                    <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                      <span>{file.file_size}</span>
+                      <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                      <span>{new Date(file.created_at || '').toLocaleDateString()}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                    <span>{file.size}</span>
-                    <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
-                    <span>{file.date}</span>
-                  </div>
-                </div>
 
-                <div className={cn(
-                  "flex items-center gap-2",
-                  view === "grid" ? "mt-6 pt-4 border-t border-border/50 justify-between" : "ml-4"
-                )}>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary">
-                      <Download className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary">
-                      <Share2 className="w-4 h-4" />
-                    </Button>
+                  <div className={cn(
+                    "flex items-center gap-2",
+                    view === "grid" ? "mt-6 pt-4 border-t border-border/50 justify-between" : "ml-4"
+                  )}>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary">
+                        <Download className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary">
+                        <Share2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <Badge variant="outline" className="bg-muted/50 border-none text-[8px] font-bold uppercase tracking-widest">
+                      {file.category}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="bg-muted/50 border-none text-[8px] font-bold uppercase tracking-widest">
-                    {file.category}
-                  </Badge>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </div>

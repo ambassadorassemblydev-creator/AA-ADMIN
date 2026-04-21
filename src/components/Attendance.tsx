@@ -27,10 +27,24 @@ import { supabase } from "@/src/lib/supabase";
 import { toast } from "sonner";
 import { cn } from "@/src/lib/utils";
 
+interface AttendanceEvent {
+  id: string;
+  title: string;
+  start_date: string;
+}
+
+interface AttendanceProfile {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url?: string | null;
+  member_id?: string | null;
+}
+
 export default function Attendance() {
-  const [events, setEvents] = React.useState<any[]>([]);
+  const [events, setEvents] = React.useState<AttendanceEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = React.useState<string>("");
-  const [members, setMembers] = React.useState<any[]>([]);
+  const [members, setMembers] = React.useState<AttendanceProfile[]>([]);
   const [attendance, setAttendance] = React.useState<Record<string, string>>({});
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -97,7 +111,7 @@ export default function Attendance() {
 
       const attendanceMap: Record<string, string> = {};
       attendanceData?.forEach(record => {
-        if (record.user_id) {
+        if (record.user_id && record.attendance) {
           attendanceMap[record.user_id] = record.attendance;
         }
       });
@@ -135,7 +149,7 @@ export default function Attendance() {
         user_id: memberId,
         service_date: serviceDate,
         service_name: serviceName,
-        attendance: status === 'present' ? 'in_person' : status,
+        attendance: (status === 'present' ? 'in_person' : status) as 'in_person' | 'online' | 'absent',
         checked_in_by: userResponse.data.user?.id,
         checked_in_at: new Date().toISOString()
       }));
@@ -267,7 +281,7 @@ export default function Attendance() {
             <CardDescription>Choose an event to track attendance for.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <Select value={selectedEvent} onValueChange={setSelectedEvent}>
+            <Select value={selectedEvent} onValueChange={(val: string | null) => setSelectedEvent(val || "")}>
               <SelectTrigger>
                 <SelectValue placeholder="Select an event..." />
               </SelectTrigger>

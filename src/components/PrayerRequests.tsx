@@ -22,6 +22,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { supabase } from "@/src/lib/supabase";
+import type { Database } from "@/src/types/database.types";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,9 +43,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "motion/react";
-import { toast } from "sonner";
 import { cn } from "@/src/lib/utils";
-import { supabase } from "@/src/lib/supabase";
 import PrayerForm from "./forms/PrayerForm";
 
 import { useAuth } from "@/src/contexts/AuthContext";
@@ -75,7 +77,7 @@ export default function PrayerRequests() {
       }
 
       if (statusFilter !== "all") {
-        query = query.eq('status', statusFilter);
+        query = query.eq('status', statusFilter as Database["public"]["Enums"]["prayer_status"]);
       }
 
       const { data, error } = await query;
@@ -268,11 +270,11 @@ export default function PrayerRequests() {
                   <CardTitle className="text-2xl font-bold tracking-tight group-hover:text-primary transition-colors">{prayer.title}</CardTitle>
                   <div className="flex items-center gap-2 mt-2">
                     <Avatar className="h-6 w-6 border shadow-sm">
-                      <AvatarImage src={prayer.is_anonymous ? undefined : prayer.profiles?.avatar_url} />
-                      <AvatarFallback className="text-[8px]">{prayer.is_anonymous ? 'A' : prayer.profiles?.first_name?.[0]}</AvatarFallback>
+                      <AvatarImage src={prayer.is_anonymous ? undefined : prayer.user?.avatar_url} />
+                      <AvatarFallback className="text-[8px]">{prayer.is_anonymous ? 'A' : prayer.user?.first_name?.[0]}</AvatarFallback>
                     </Avatar>
                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      {prayer.is_anonymous ? 'Anonymous Member' : `${prayer.profiles?.first_name} ${prayer.profiles?.last_name}`}
+                      {prayer.is_anonymous ? 'Anonymous Member' : `${prayer.user?.first_name} ${prayer.user?.last_name}`}
                     </span>
                   </div>
                 </CardHeader>

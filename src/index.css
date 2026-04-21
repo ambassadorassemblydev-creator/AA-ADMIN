@@ -55,7 +55,7 @@
     --card-foreground: oklch(0.15 0.05 160);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.15 0.05 160);
-    --primary: oklch(0.45 0.15 160);
+    --primary: oklch(0.75 0.18 150);
     --primary-foreground: oklch(0.99 0.01 160);
     --secondary: oklch(0.92 0.03 160);
     --secondary-foreground: oklch(0.3 0.1 160);
@@ -66,7 +66,7 @@
     --destructive: oklch(0.55 0.2 25);
     --border: oklch(0.9 0.03 160);
     --input: oklch(0.9 0.03 160);
-    --ring: oklch(0.45 0.15 160);
+    --ring: oklch(0.75 0.18 150);
     --chart-1: oklch(0.45 0.15 160);
     --chart-2: oklch(0.6 0.12 160);
     --chart-3: oklch(0.75 0.08 160);
@@ -101,7 +101,7 @@
     --destructive: oklch(0.5 0.2 25);
     --border: oklch(0.25 0.04 160);
     --input: oklch(0.25 0.04 160);
-    --ring: oklch(0.65 0.15 160);
+    --ring: oklch(0.75 0.18 150);
     --chart-1: oklch(0.65 0.15 160);
     --chart-2: oklch(0.5 0.12 160);
     --chart-3: oklch(0.4 0.1 160);
@@ -137,7 +137,7 @@
     background: linear-gradient(135deg, oklch(0.99 0.01 160) 0%, oklch(0.95 0.02 160) 100%);
   }
   .glass-card {
-    @apply bg-card/60 backdrop-blur-2xl border-none shadow-2xl ring-1 ring-white/10;
+    @apply bg-card border-none shadow-2xl ring-1 ring-black/5;
   }
 }
 

@@ -42,12 +42,16 @@ import { supabase } from "@/src/lib/supabase";
 import MinistryForm from "./forms/MinistryForm";
 import { toast } from "sonner";
 import { cn } from "@/src/lib/utils";
+import { auditRepo } from "@/src/lib/audit";
+import { useAuth } from "@/src/contexts/AuthContext";
 
 interface MinistriesProps {
   type?: "ministry" | "department";
+  onTabChange?: (tab: string) => void;
 }
 
-export default function Ministries({ type = "ministry" }: MinistriesProps) {
+export default function Ministries({ type = "ministry", onTabChange }: MinistriesProps) {
+  const { user } = useAuth();
   const isDepartment = type === "department";
   const title = isDepartment ? "Departments" : "Ministries";
   const description = isDepartment 
@@ -80,11 +84,11 @@ export default function Ministries({ type = "ministry" }: MinistriesProps) {
       }
 
       if (statusFilter !== "all") {
-        query = query.eq('status', statusFilter);
+        query = query.eq('is_active', statusFilter === 'active');
       }
 
-      // Filter by type (using type as a proxy if category column doesn't exist yet)
-      query = query.eq('type', type);
+      // Filter by type if column exists (optional feature)
+      // query = query.eq('type', type);
 
       const { data, error } = await query;
 
@@ -108,6 +112,15 @@ export default function Ministries({ type = "ministry" }: MinistriesProps) {
     try {
       const { error } = await supabase.from('ministries').delete().eq('id', id);
       if (error) throw error;
+
+      // Log delete action
+      await auditRepo.logAction({
+        admin_id: user?.id || 'unknown',
+        action: 'DELETE',
+        table_name: 'ministries',
+        record_id: id
+      });
+
       toast.success(`${isDepartment ? 'Department' : 'Ministry'} deleted successfully`);
       fetchMinistries();
     } catch (error: any) {
@@ -221,7 +234,7 @@ export default function Ministries({ type = "ministry" }: MinistriesProps) {
                       <DropdownMenuItem onClick={() => setEditingMinistry(ministry)}>
                         <Edit2 className="w-4 h-4 mr-2" /> Edit Ministry
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onTabChange?.("members")}>
                         <UserPlus className="w-4 h-4 mr-2" /> Assign Members
                       </DropdownMenuItem>
                       <DropdownMenuItem>
@@ -237,7 +250,7 @@ export default function Ministries({ type = "ministry" }: MinistriesProps) {
 
                 <div className="relative h-56 overflow-hidden">
                   <img 
-                    src={ministry.image_url || `https://picsum.photos/seed/${ministry.id}/800/400`} 
+                    src={ministry.cover_image_url || `https://picsum.photos/seed/${ministry.id}/800/400`} 
                     alt={ministry.name}
                     className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-700"
                     referrerPolicy="no-referrer"
@@ -271,7 +284,7 @@ export default function Ministries({ type = "ministry" }: MinistriesProps) {
                       <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                         <MapPin className="w-3 h-3" /> Location
                       </div>
-                      <p className="text-sm font-medium truncate">{ministry.location || 'Church Hall'}</p>
+                      <p className="text-sm font-medium truncate">{ministry.meeting_location || 'Church Hall'}</p>
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">

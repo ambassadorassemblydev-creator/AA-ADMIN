@@ -195,7 +195,7 @@ export default function Giving() {
             <DollarSign className="w-4 h-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold tracking-tight">£{stats.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+            <div className="text-3xl font-bold tracking-tight">₦{stats.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
             <div className="flex items-center mt-2 gap-1.5">
               <Badge className="bg-emerald-500/10 text-emerald-600 border-none text-[10px] font-bold">
                 <ArrowUpRight className="w-3 h-3 mr-0.5" />
@@ -229,7 +229,7 @@ export default function Giving() {
             <TrendingUp className="w-4 h-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold tracking-tight">£{stats.avg.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+            <div className="text-3xl font-bold tracking-tight">₦{stats.avg.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
             <div className="flex items-center mt-2 gap-1.5">
               <Badge className="bg-amber-500/10 text-amber-600 border-none text-[10px] font-bold">
                 <ArrowUpRight className="w-3 h-3 mr-0.5" />
@@ -402,7 +402,7 @@ export default function Giving() {
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="text-right space-y-1">
-                      <p className="text-lg font-bold tracking-tight">£{(donation.amount || 0).toFixed(2)}</p>
+                      <p className="text-lg font-bold tracking-tight">₦{(donation.amount || 0).toFixed(2)}</p>
                       <div className="flex items-center justify-end gap-1.5">
                         <div className={cn("w-1.5 h-1.5 rounded-full", donation.status === 'completed' ? "bg-emerald-500" : "bg-amber-500")} />
                         <span className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">{donation.status}</span>

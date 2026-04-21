@@ -23,16 +23,41 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
+import { supabase } from "@/src/lib/supabase";
+import type { Database } from "@/src/types/database.types";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/src/lib/utils";
 
-const MOCK_REPORTS = [
-  { id: 1, name: "Monthly Financial Summary - March 2026", type: "Financial", format: "PDF", status: "Ready", date: "2026-04-01" },
-  { id: 2, name: "Member Growth Analysis Q1", type: "Growth", format: "Excel", status: "Ready", date: "2026-04-05" },
-  { id: 3, name: "Departmental Performance Audit", type: "Audit", format: "PDF", status: "Processing", date: "2026-04-12" },
-  { id: 4, name: "Annual Ministry Impact Report", type: "Impact", format: "PDF", status: "Ready", date: "2026-01-15" },
-];
+type Report = Database["public"]["Tables"]["reports"]["Row"];
+
 
 export default function Reports() {
   const [isGenerating, setIsGenerating] = React.useState(false);
+  const [reports, setReports] = React.useState<Report[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [search, setSearch] = React.useState("");
+
+  const fetchReports = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setReports(data || []);
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+      toast.error("Failed to load reports");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchReports();
+  }, []);
 
   const handleGenerate = () => {
     setIsGenerating(true);
@@ -154,13 +179,22 @@ export default function Reports() {
                 </div>
                 <div className="relative w-full sm:w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="Search reports..." className="pl-10 h-10 rounded-xl bg-background/50 border-none w-full" />
+                  <Input 
+                    placeholder="Search reports..." 
+                    className="pl-10 h-10 rounded-xl bg-background/50 border-none w-full" 
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-border/50">
-                {MOCK_REPORTS.map((report) => (
+                {loading ? (
+                  <div className="flex items-center justify-center p-12">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                  </div>
+                ) : reports.filter(r => r.name.toLowerCase().includes(search.toLowerCase())).map((report) => (
                   <div key={report.id} className="p-6 flex items-center justify-between hover:bg-muted/20 transition-colors group">
                     <div className="flex items-center gap-4">
                       <div className={cn(
@@ -173,7 +207,7 @@ export default function Reports() {
                         <h4 className="font-bold text-sm">{report.name}</h4>
                         <div className="flex items-center gap-3 mt-1">
                           <Badge variant="outline" className="bg-muted/50 border-none text-[8px] font-bold uppercase tracking-widest">{report.type}</Badge>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{report.date}</span>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{new Date(report.created_at || '').toLocaleDateString()}</span>
                         </div>
                       </div>
                     </div>
@@ -223,6 +257,3 @@ export default function Reports() {
   );
 }
 
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(" ");
-}

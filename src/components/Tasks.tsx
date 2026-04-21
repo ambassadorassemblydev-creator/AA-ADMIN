@@ -52,6 +52,39 @@ import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { cn } from "@/src/lib/utils";
 import TaskForm from "./forms/TaskForm";
+import { supabase } from "@/src/lib/supabase";
+import type { Database } from "@/src/types/database.types";
+
+interface Subtask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
+interface Comment {
+  id: string;
+  user: string;
+  text: string;
+  date: string;
+}
+
+type Task = Omit<Database["public"]["Tables"]["tasks"]["Row"], "subtasks" | "comments"> & {
+  subtasks: Subtask[] | null;
+  comments: Comment[] | null;
+  assignee?: {
+    first_name: string | null;
+    last_name: string | null;
+    avatar_url: string | null;
+  } | null;
+};
+
+type Worker = Omit<Database["public"]["Tables"]["church_workers"]["Row"], "profiles"> & {
+  profiles: {
+    first_name: string | null;
+    last_name: string | null;
+    avatar_url: string | null;
+  } | null;
+};
 
 const COLUMNS = [
   { id: "todo", title: "To Do", color: "bg-blue-500", shadow: "shadow-blue-500/20" },
@@ -60,125 +93,173 @@ const COLUMNS = [
   { id: "done", title: "Completed", color: "bg-emerald-500", shadow: "shadow-emerald-500/20" },
 ];
 
-const INITIAL_TASKS = [
-  { 
-    id: "1", 
-    title: "Prepare Sunday Sermon Slides", 
-    description: "Create visual aids for the upcoming sermon on 'Faith and Perseverance'. Include key scriptures and high-quality images.",
-    status: "todo", 
-    priority: "High", 
-    assignee: "Pastor John", 
-    dueDate: "2026-04-19",
-    category: "Ministry",
-    subtasks: [
-      { id: "s1", title: "Gather scriptures", completed: true },
-      { id: "s2", title: "Find background images", completed: false },
-      { id: "s3", title: "Review with Media Team", completed: false },
-    ],
-    comments: [
-      { id: "c1", user: "Sarah M.", text: "I have some high-res photos from the last outreach if you need them.", date: "2026-04-14" }
-    ]
-  },
-  { 
-    id: "2", 
-    title: "Update Media Gallery", 
-    description: "Upload photos from the Easter service to the website and social media platforms.",
-    status: "in-progress", 
-    priority: "Medium", 
-    assignee: "Sarah M.", 
-    dueDate: "2026-04-16",
-    category: "Media",
-    subtasks: [
-      { id: "s4", title: "Select best photos", completed: true },
-      { id: "s5", title: "Edit and resize", completed: true },
-      { id: "s6", title: "Upload to website", completed: false },
-    ],
-    comments: []
-  },
-  { 
-    id: "3", 
-    title: "Coordinate Youth Outreach", 
-    description: "Plan the logistics for the Saturday community outreach program. Need to confirm transportation and food.",
-    status: "review", 
-    priority: "High", 
-    assignee: "David K.", 
-    dueDate: "2026-04-20",
-    category: "Outreach",
-    subtasks: [],
-    comments: []
-  },
-  { 
-    id: "4", 
-    title: "Financial Report Q1", 
-    description: "Compile all departmental expenses and income for the first quarter of 2026.",
-    status: "done", 
-    priority: "Medium", 
-    assignee: "Admin", 
-    dueDate: "2026-04-10",
-    category: "Finance",
-    subtasks: [
-      { id: "s7", title: "Gather receipts", completed: true },
-      { id: "s8", title: "Reconcile bank statements", completed: true },
-      { id: "s9", title: "Generate PDF report", completed: true },
-    ],
-    comments: []
-  },
-];
 
 export default function Tasks() {
-  const [tasks, setTasks] = React.useState(INITIAL_TASKS);
+  const [tasks, setTasks] = React.useState<Task[]>([]);
+  const [workers, setWorkers] = React.useState<Worker[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
   const [priorityFilter, setPriorityFilter] = React.useState("All");
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
-  const [editingTask, setEditingTask] = React.useState<any>(null);
-  const [viewingTask, setViewingTask] = React.useState<any>(null);
+  const [editingTask, setEditingTask] = React.useState<Task | null>(null);
+  const [viewingTask, setViewingTask] = React.useState<Task | null>(null);
+
+  React.useEffect(() => {
+    fetchTasks();
+    fetchWorkers();
+  }, []);
+
+  const fetchTasks = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select(`
+          *,
+          assignee:profiles!tasks_assignee_id_fkey (
+            first_name,
+            last_name,
+            avatar_url
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTasks((data as any) || []);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      toast.error("Failed to load tasks");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchWorkers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('church_workers')
+        .select(`
+          *,
+          profiles (
+            first_name,
+            last_name,
+            avatar_url
+          )
+        `);
+      if (error) throw error;
+      setWorkers((data as any) || []);
+    } catch (error) {
+      console.error("Error fetching workers:", error);
+    }
+  };
 
   const filteredTasks = tasks.filter(task => {
+    const assigneeName = task.assignee 
+      ? `${task.assignee.first_name} ${task.assignee.last_name}`.toLowerCase()
+      : "";
     const matchesSearch = task.title.toLowerCase().includes(search.toLowerCase()) || 
-                         task.assignee.toLowerCase().includes(search.toLowerCase());
+                         assigneeName.includes(search.toLowerCase());
     const matchesPriority = priorityFilter === "All" || task.priority === priorityFilter;
     return matchesSearch && matchesPriority;
   });
 
-  const handleCreateTask = (data: any) => {
-    const newTask = {
-      ...data,
-      id: Math.random().toString(36).substr(2, 9),
-      dueDate: data.dueDate.toISOString().split('T')[0],
-      subtasks: [],
-      comments: []
-    };
-    setTasks([...tasks, newTask]);
-    setIsCreateOpen(false);
-    toast.success("Task created successfully!");
+  const handleCreateTask = async (data: any) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .insert([{
+          title: data.title,
+          description: data.description,
+          status: data.status,
+          priority: data.priority,
+          assignee_id: data.assignee, // This is the user_id from the form
+          due_date: data.dueDate.toISOString().split('T')[0],
+          category: data.category,
+          subtasks: [],
+          comments: []
+        }]);
+
+      if (error) throw error;
+      setIsCreateOpen(false);
+      fetchTasks();
+      toast.success("Task created successfully!");
+    } catch (error) {
+      console.error("Error creating task:", error);
+      toast.error("Failed to create task");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleUpdateTask = (data: any) => {
-    setTasks(tasks.map(t => t.id === editingTask.id ? { 
-      ...t, 
-      ...data, 
-      dueDate: data.dueDate instanceof Date ? data.dueDate.toISOString().split('T')[0] : data.dueDate 
-    } : t));
-    setEditingTask(null);
-    toast.success("Task updated!");
+  const handleUpdateTask = async (data: any) => {
+    if (!editingTask) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          title: data.title,
+          description: data.description,
+          status: data.status,
+          priority: data.priority,
+          assignee_id: data.assignee,
+          due_date: data.dueDate instanceof Date ? data.dueDate.toISOString().split('T')[0] : data.dueDate,
+          category: data.category
+        })
+        .eq('id', editingTask.id);
+
+      if (error) throw error;
+      setEditingTask(null);
+      fetchTasks();
+      toast.success("Task updated!");
+    } catch (error) {
+      console.error("Error updating task:", error);
+      toast.error("Failed to update task");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteTask = (id: string) => {
-    setTasks(tasks.filter(t => t.id !== id));
-    toast.error("Task deleted");
+  const handleDeleteTask = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      fetchTasks();
+      toast.error("Task deleted");
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      toast.error("Failed to delete task");
+    }
   };
 
-  const handleMoveTask = (id: string, newStatus: string) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, status: newStatus } : t));
-    toast.info(`Task moved to ${newStatus.replace('-', ' ')}`);
+  const handleMoveTask = async (id: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
+      toast.info(`Task moved to ${newStatus.replace('-', ' ')}`);
+    } catch (error) {
+      console.error("Error moving task:", error);
+      toast.error("Failed to move task");
+    }
   };
 
   const toggleSubtask = (taskId: string, subtaskId: string) => {
-    setTasks(tasks.map(t => {
+    setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
+        const subtasks = (t.subtasks as any as Subtask[]) || [];
         return {
           ...t,
-          subtasks: t.subtasks.map(s => s.id === subtaskId ? { ...s, completed: !s.completed } : s)
+          subtasks: subtasks.map(s => s.id === subtaskId ? { ...s, completed: !s.completed } : s)
         };
       }
       return t;
@@ -195,7 +276,15 @@ export default function Tasks() {
   const exportTasks = () => {
     const csv = [
       ["ID", "Title", "Status", "Priority", "Assignee", "Due Date", "Category"],
-      ...tasks.map(t => [t.id, t.title, t.status, t.priority, t.assignee, t.dueDate, t.category])
+      ...tasks.map(t => [
+        t.id, 
+        t.title, 
+        t.status, 
+        t.priority, 
+        t.assignee ? `${t.assignee.first_name} ${t.assignee.last_name}` : "Unassigned", 
+        t.due_date, 
+        t.category
+      ])
     ].map(e => e.join(",")).join("\n");
     
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -210,13 +299,15 @@ export default function Tasks() {
     toast.success("Tasks exported to CSV");
   };
 
-  const getProgress = (task: any) => {
-    if (!task.subtasks || task.subtasks.length === 0) return task.status === 'done' ? 100 : 0;
-    const completed = task.subtasks.filter((s: any) => s.completed).length;
-    return Math.round((completed / task.subtasks.length) * 100);
+  const getProgress = (task: Task) => {
+    const subtasks = (task.subtasks as any as Subtask[]) || [];
+    if (subtasks.length === 0) return task.status === 'done' ? 100 : 0;
+    const completed = subtasks.filter(s => s.completed).length;
+    return Math.round((completed / subtasks.length) * 100);
   };
 
-  const isOverdue = (date: string) => {
+  const isOverdue = (date: string | null) => {
+    if (!date) return false;
     return new Date(date) < new Date(new Date().setHours(0,0,0,0)) && date !== "";
   };
 
@@ -245,18 +336,18 @@ export default function Tasks() {
             Export
           </Button>
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
+            <DialogTrigger render={
               <Button className="rounded-2xl h-12 px-6 font-bold uppercase tracking-widest text-[10px] gap-2 shadow-2xl shadow-primary/30 hover:scale-105 transition-transform">
                 <Plus className="w-4 h-4" />
                 Create Task
               </Button>
-            </DialogTrigger>
+            } />
             <DialogContent className="sm:max-w-[500px] rounded-3xl border-none shadow-2xl">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-black tracking-tighter">New Task</DialogTitle>
                 <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Add a new operational task to the board</DialogDescription>
               </DialogHeader>
-              <TaskForm onSubmit={handleCreateTask} onCancel={() => setIsCreateOpen(false)} />
+              <TaskForm onSubmit={handleCreateTask} workers={workers} onCancel={() => setIsCreateOpen(false)} />
             </DialogContent>
           </Dialog>
         </div>
@@ -350,7 +441,7 @@ export default function Tasks() {
                         <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{task.category}</span>
                       </div>
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger>
                           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity">
                             <MoreVertical className="w-4 h-4" />
                           </Button>
@@ -382,7 +473,7 @@ export default function Tasks() {
                       {task.title}
                     </h4>
 
-                    {task.subtasks.length > 0 && (
+                    {(task.subtasks as any as Subtask[])?.length > 0 && (
                       <div className="space-y-2 mb-4">
                         <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
                           <span>Progress</span>
@@ -395,17 +486,21 @@ export default function Tasks() {
                     <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
                       <div className="flex items-center gap-2">
                         <Avatar className="h-7 w-7 border-2 border-background shadow-lg">
-                          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${task.assignee}`} />
-                          <AvatarFallback className="text-[8px] font-black">{task.assignee[0]}</AvatarFallback>
+                          <AvatarImage src={task.assignee?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${task.assignee?.first_name}`} />
+                          <AvatarFallback className="text-[8px] font-black">{task.assignee?.first_name?.[0] || '?'}</AvatarFallback>
                         </Avatar>
-                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter">{task.assignee}</span>
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter">
+                          {task.assignee && typeof task.assignee === 'object' 
+                            ? `${task.assignee.first_name} ${task.assignee.last_name}` 
+                            : (task as any).assignee || "Unassigned"}
+                        </span>
                       </div>
                       <div className={cn(
                         "flex items-center gap-1.5 px-2 py-1 rounded-lg",
-                        isOverdue(task.dueDate) && task.status !== 'done' ? "bg-destructive/10 text-destructive" : "text-muted-foreground"
+                        isOverdue(task.due_date) && task.status !== 'done' ? "bg-destructive/10 text-destructive" : "text-muted-foreground"
                       )}>
                         <Calendar className="w-3.5 h-3.5" />
-                        <span className="text-[10px] font-black">{task.dueDate}</span>
+                        <span className="text-[10px] font-black">{task.due_date || 'No Date'}</span>
                       </div>
                     </div>
                   </motion.div>
@@ -434,7 +529,12 @@ export default function Tasks() {
           </DialogHeader>
           {editingTask && (
             <TaskForm 
-              initialData={editingTask} 
+              initialData={{
+                ...editingTask,
+                assignee: editingTask.assignee_id,
+                dueDate: editingTask.due_date ? new Date(editingTask.due_date) : new Date()
+              }} 
+              workers={workers}
               onSubmit={handleUpdateTask} 
               onCancel={() => setEditingTask(null)} 
             />
@@ -465,12 +565,16 @@ export default function Tasks() {
                 <div className="flex flex-wrap gap-6">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 border-2 border-primary/20 shadow-xl">
-                      <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${viewingTask.assignee}`} />
-                      <AvatarFallback>{viewingTask.assignee[0]}</AvatarFallback>
+                      <AvatarImage src={viewingTask.assignee && typeof viewingTask.assignee === 'object' ? viewingTask.assignee.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${viewingTask.assignee.first_name}` : `https://api.dicebear.com/7.x/avataaars/svg?seed=${viewingTask.assignee}`} />
+                      <AvatarFallback>{viewingTask.assignee && typeof viewingTask.assignee === 'object' ? (viewingTask.assignee.first_name || '?')[0] : String(viewingTask.assignee || '?')[0]}</AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Assignee</p>
-                      <p className="text-sm font-black">{viewingTask.assignee}</p>
+                      <p className="text-sm font-black">
+                        {viewingTask.assignee && typeof viewingTask.assignee === 'object' 
+                          ? `${viewingTask.assignee.first_name} ${viewingTask.assignee.last_name}` 
+                          : (viewingTask as any).assignee || "Unassigned"}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -479,7 +583,7 @@ export default function Tasks() {
                     </div>
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Due Date</p>
-                      <p className="text-sm font-black">{viewingTask.dueDate}</p>
+                      <p className="text-sm font-black">{viewingTask.due_date || 'No due date'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -507,12 +611,12 @@ export default function Tasks() {
 
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Subtasks ({viewingTask.subtasks.filter((s:any) => s.completed).length}/{viewingTask.subtasks.length})</h4>
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Subtasks ({(viewingTask.subtasks as any as Subtask[])?.filter(s => s.completed).length || 0}/{(viewingTask.subtasks as any as Subtask[])?.length || 0})</h4>
                       <span className="text-[10px] font-black text-primary">{getProgress(viewingTask)}%</span>
                     </div>
                     <Progress value={getProgress(viewingTask)} className="h-2 rounded-full bg-muted" />
                     <div className="space-y-2">
-                      {viewingTask.subtasks.map((sub: any) => (
+                      {(viewingTask.subtasks as any as Subtask[])?.map((sub) => (
                         <div 
                           key={sub.id} 
                           className="flex items-center gap-3 p-3 rounded-2xl bg-muted/30 border border-white/5 cursor-pointer hover:bg-muted/50 transition-colors"
@@ -527,7 +631,7 @@ export default function Tasks() {
                           <span className={cn("text-sm font-bold", sub.completed && "line-through text-muted-foreground")}>{sub.title}</span>
                         </div>
                       ))}
-                      {viewingTask.subtasks.length === 0 && (
+                      {(!viewingTask.subtasks || (viewingTask.subtasks as any as Subtask[]).length === 0) && (
                         <p className="text-xs text-muted-foreground italic">No subtasks added.</p>
                       )}
                     </div>
@@ -536,7 +640,7 @@ export default function Tasks() {
                   <div className="space-y-4">
                     <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Comments</h4>
                     <div className="space-y-4">
-                      {viewingTask.comments.map((comment: any) => (
+                      {(viewingTask.comments as any as Comment[])?.map((comment) => (
                         <div key={comment.id} className="flex gap-3">
                           <Avatar className="h-8 w-8 shrink-0">
                             <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.user}`} />

@@ -16,13 +16,17 @@ import {
   CheckCircle2,
   AlertCircle,
   MoreHorizontal,
-  Users
+  Users,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/src/lib/supabase";
+import type { Database } from "@/src/types/database.types";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,15 +58,14 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { motion, AnimatePresence } from "motion/react";
-import { supabase } from "@/src/lib/supabase";
 import MemberForm from "./forms/MemberForm";
-import { toast } from "sonner";
 import { cn } from "@/src/lib/utils";
+import { auditRepo } from "@/src/lib/audit";
 
 import { useAuth } from "@/src/contexts/AuthContext";
 
-export default function MembersList() {
-  const { loading: authLoading } = useAuth();
+export default function MembersList({ onTabChange }: { onTabChange?: (tab: string) => void }) {
+  const { user, loading: authLoading } = useAuth();
   const [members, setMembers] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
@@ -75,6 +78,13 @@ export default function MembersList() {
   const [viewingMember, setViewingMember] = React.useState<any>(null);
   const pageSize = 8;
 
+  const [memberNotes, setMemberNotes] = React.useState<any[]>([]);
+  const [isNoteAdding, setIsNoteAdding] = React.useState(false);
+  const [newNote, setNewNote] = React.useState("");
+
+  const { role } = useAuth();
+  const canViewNotes = role === 'pastor' || role === 'super_admin';
+
   const fetchMembers = async (retries = 3) => {
     setLoading(true);
     try {
@@ -83,11 +93,12 @@ export default function MembersList() {
         .select('*', { count: 'exact' });
 
       if (search) {
-        query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`);
+        query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,member_id.ilike.%${search}%`);
       }
 
       if (statusFilter !== "all") {
-        query = query.eq('status', statusFilter);
+        type Member = Database["public"]["Tables"]["profiles"]["Row"];
+        query = query.eq('status', statusFilter as NonNullable<Member["status"]>);
       }
 
       const { data, error, count } = await query
@@ -105,6 +116,63 @@ export default function MembersList() {
       console.error("Error fetching members:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchNotes = async (memberId: string) => {
+    if (!canViewNotes) return;
+    try {
+      const { data, error } = await supabase
+        .from('member_notes')
+        .select(`
+          *,
+          author:author_id (
+            first_name,
+            last_name
+          )
+        `)
+        .eq('member_id', memberId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setMemberNotes(data || []);
+    } catch (error) {
+      console.error("Error fetching notes:", error);
+    }
+  };
+
+  const handleAddNote = async (memberId: string) => {
+    if (!newNote.trim() || !user) return;
+    setIsNoteAdding(true);
+    try {
+      const { error } = await supabase
+        .from('member_notes')
+        .insert({
+          member_id: memberId,
+          author_id: user.id,
+          note: newNote,
+          is_confidential: true,
+          category: 'Pastoral'
+        });
+      
+      if (error) throw error;
+      
+      toast.success("Note added successfully");
+      setNewNote("");
+      fetchNotes(memberId);
+
+      // Audit log
+      await auditRepo.logAction({
+        admin_id: user.id,
+        action: 'INSERT',
+        table_name: 'member_notes',
+        record_id: memberId,
+        new_values: { note: newNote, category: 'Pastoral' }
+      });
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setIsNoteAdding(false);
     }
   };
 
@@ -163,6 +231,16 @@ export default function MembersList() {
         .in('id', Array.from(selectedMembers));
 
       if (error) throw error;
+
+      // Log bulk delete action
+      await auditRepo.logAction({
+        admin_id: user?.id || 'unknown',
+        action: 'DELETE',
+        table_name: 'profiles',
+        record_id: 'bulk_delete',
+        new_values: { count: selectedMembers.size, ids: Array.from(selectedMembers) }
+      });
+
       toast.success(`${selectedMembers.size} members deleted successfully`);
       setSelectedMembers(new Set());
       fetchMembers();
@@ -177,6 +255,15 @@ export default function MembersList() {
     try {
       const { error } = await supabase.from('profiles').delete().eq('id', id);
       if (error) throw error;
+
+      // Log delete action
+      await auditRepo.logAction({
+        admin_id: user?.id || 'unknown',
+        action: 'DELETE',
+        table_name: 'profiles',
+        record_id: id
+      });
+
       toast.success("Member deleted successfully");
       fetchMembers();
     } catch (error: any) {
@@ -257,7 +344,7 @@ export default function MembersList() {
           >
             {selectedMembers.size === members.length && members.length > 0 ? 'Deselect All' : 'Select All'}
           </Button>
-          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v || "all"); setPage(1); }}>
           <SelectTrigger className="w-[180px] h-11 bg-card/50 border-none shadow-sm">
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4" />
@@ -268,7 +355,8 @@ export default function MembersList() {
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
-            <SelectItem value="on_leave">On Leave</SelectItem>
+            <SelectItem value="suspended">Suspended</SelectItem>
+            <SelectItem value="pending_verification">Pending</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -328,7 +416,10 @@ export default function MembersList() {
                         <div className="flex-1 min-w-0 space-y-1">
                           <div className="flex items-center justify-between">
                             <button 
-                              onClick={() => setViewingMember(member)}
+                              onClick={() => {
+                                setViewingMember(member);
+                                fetchNotes(member.id);
+                              }}
                               className="font-bold text-lg truncate hover:text-primary hover:underline transition-colors text-left"
                             >
                               {member.first_name} {member.last_name}
@@ -343,7 +434,7 @@ export default function MembersList() {
                                 <DropdownMenuItem onClick={() => setEditingMember(member)}>
                                   <Edit2 className="w-4 h-4 mr-2" /> Edit Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => onTabChange?.("attendance")}>
                                   <Calendar className="w-4 h-4 mr-2" /> View Attendance
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="text-destructive focus:bg-destructive focus:text-destructive-foreground" onClick={() => handleDelete(member.id)}>
@@ -510,8 +601,55 @@ export default function MembersList() {
                     <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
                       <Edit2 className="w-4 h-4" /> Biography
                     </h3>
-                    <div className="p-4 rounded-lg bg-muted/50 text-sm leading-relaxed">
+                    <div className="p-4 rounded-lg bg-muted/50 text-sm leading-relaxed whitespace-pre-wrap">
                       {viewingMember.bio}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pastoral Notes Section - Restricted */}
+                {canViewNotes && (
+                  <div className="pt-6 border-t space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4" /> Pastoral Notes
+                      </h3>
+                      <Badge variant="outline" className="text-[10px] border-emerald-500/20 text-emerald-500">Confidential</Badge>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex gap-2">
+                        <Input 
+                          placeholder="Add a confidential pastoral note..." 
+                          value={newNote}
+                          onChange={(e) => setNewNote(e.target.value)}
+                          className="bg-muted/30 border-none h-10 text-sm"
+                        />
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleAddNote(viewingMember.id)}
+                          disabled={isNoteAdding || !newNote.trim()}
+                          className="bg-emerald-600 hover:bg-emerald-700 h-10 px-4"
+                        >
+                          {isNoteAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add"}
+                        </Button>
+                      </div>
+
+                      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                        {memberNotes.length > 0 ? memberNotes.map((note) => (
+                          <div key={note.id} className="p-3 rounded-xl bg-card border border-muted shadow-sm space-y-2 animate-in fade-in slide-in-from-top-2">
+                            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                              <span>Pastor {note.author?.last_name || 'Admin'}</span>
+                              <span>{new Date(note.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <p className="text-xs leading-relaxed">{note.note}</p>
+                          </div>
+                        )) : (
+                          <div className="text-center py-6 text-muted-foreground italic text-xs">
+                            No pastoral notes recorded.
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
