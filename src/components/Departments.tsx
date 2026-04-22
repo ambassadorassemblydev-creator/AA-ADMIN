@@ -64,7 +64,7 @@ export default function Departments({ onTabChange }: { onTabChange?: (tab: strin
             last_name,
             avatar_url
           ),
-          members:department_members(count)
+          workers:church_workers(count)
         `);
 
       if (search) {
@@ -247,9 +247,9 @@ export default function Departments({ onTabChange }: { onTabChange?: (tab: strin
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Users className="w-4 h-4" />
-                          <span>Members</span>
+                          <span>Workers</span>
                         </div>
-                        <span className="font-semibold">{dept.members?.[0]?.count || 0}</span>
+                        <span className="font-semibold">{dept.workers?.[0]?.count || 0}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2 text-muted-foreground">

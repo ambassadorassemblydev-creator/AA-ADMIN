@@ -15,6 +15,7 @@ import Departments from "./components/Departments";
 import Giving from "./components/Giving";
 import PrayerRequests from "./components/PrayerRequests";
 import Events from "./components/Events";
+import EventRegistrations from "./components/EventRegistrations";
 import MediaGallery from "./components/MediaGallery";
 import Attendance from "./components/Attendance";
 import AILab from "./components/AILab";
@@ -27,6 +28,10 @@ import Reports from "./components/Reports";
 import Volunteers from "./components/Volunteers";
 import MasterRota from "./components/MasterRota";
 import Login from "./components/Login";
+import LiveStreamManager from "./components/LiveStreamManager";
+import ContactInbox from "./components/ContactInbox";
+import BlogPosts from "./components/BlogPosts";
+import DevoManager from "./components/DevoManager";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -153,6 +158,8 @@ function AppContent() {
         return <PrayerRequests />;
       case "events":
         return <Events />;
+      case "event-registrations":
+        return <EventRegistrations />;
       case "media":
         return <MediaGallery />;
       case "attendance":
@@ -175,6 +182,14 @@ function AppContent() {
         return <Volunteers />;
       case "master-rota":
         return <MasterRota />;
+      case "live-stream":
+        return <LiveStreamManager />;
+      case "contact-inbox":
+        return <ContactInbox />;
+      case "blog-posts":
+        return <BlogPosts />;
+      case "devotionals":
+        return <DevoManager />;
       default:
         return <Dashboard />;
     }

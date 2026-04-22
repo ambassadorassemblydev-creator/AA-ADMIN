@@ -24,16 +24,17 @@ import {
 import { supabase } from "@/src/lib/supabase";
 import { toast } from "sonner";
 import { Loader2, Calendar as CalendarIcon } from "lucide-react";
+import { ImageUpload } from "@/src/components/ui/ImageUpload";
 
 const eventSchema = z.object({
   title: z.string().min(2, "Title is required"),
   description: z.string().min(10, "Description is required"),
-  location: z.string().min(2, "Location is required"),
-  starts_at: z.string().min(1, "Start date is required"),
-  ends_at: z.string().min(1, "End date is required"),
-  category: z.string().optional(),
-  status: z.enum(["published", "draft", "cancelled"]),
-  image_url: z.string().url().optional().or(z.literal("")),
+  location_name: z.string().min(2, "Location is required"),
+  start_date: z.string().min(1, "Start date is required"),
+  end_date: z.string().min(1, "End date is required"),
+  event_type: z.string().optional(),
+  status: z.enum(["upcoming", "completed", "cancelled"]),
+  cover_image_url: z.string().optional(),
   capacity: z.number().min(0).optional(),
 });
 
@@ -52,16 +53,19 @@ export default function EventForm({ initialData, onSuccess, onCancel }: EventFor
     resolver: zodResolver(eventSchema),
     defaultValues: initialData ? {
       ...initialData,
-      starts_at: initialData.starts_at ? new Date(initialData.starts_at).toISOString().slice(0, 16) : "",
-      ends_at: initialData.ends_at ? new Date(initialData.ends_at).toISOString().slice(0, 16) : "",
+      event_type: initialData.event_type || "other",
+      status: initialData.status || "upcoming",
+      start_date: initialData.start_date ? new Date(initialData.start_date).toISOString().slice(0, 16) : "",
+      end_date: initialData.end_date ? new Date(initialData.end_date).toISOString().slice(0, 16) : "",
       capacity: initialData.capacity || 0,
     } : {
       title: "",
       description: "",
-      location: "",
-      starts_at: "",
-      ends_at: "",
-      status: "published",
+      location_name: "",
+      start_date: "",
+      end_date: "",
+      event_type: "other",
+      status: "upcoming",
       capacity: 0,
     },
   });
@@ -129,7 +133,7 @@ export default function EventForm({ initialData, onSuccess, onCancel }: EventFor
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="starts_at"
+            name="start_date"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Start Date & Time</FormLabel>
@@ -142,7 +146,7 @@ export default function EventForm({ initialData, onSuccess, onCancel }: EventFor
           />
           <FormField
             control={form.control}
-            name="ends_at"
+            name="end_date"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>End Date & Time</FormLabel>
@@ -157,7 +161,7 @@ export default function EventForm({ initialData, onSuccess, onCancel }: EventFor
 
         <FormField
           control={form.control}
-          name="location"
+          name="location_name"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Location</FormLabel>
@@ -206,6 +210,24 @@ export default function EventForm({ initialData, onSuccess, onCancel }: EventFor
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="cover_image_url"
+          render={({ field }) => (
+            <FormItem>
+              <ImageUpload
+                label="Event Cover Image"
+                hint="Recommended: 16:9 banner (1200×675). Shown on the events page and event detail."
+                value={field.value}
+                onChange={field.onChange}
+                folder="ambassadors_assembly/events"
+                aspectRatio="video"
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="flex justify-end gap-3 pt-4">
           <Button type="button" variant="outline" onClick={onCancel}>

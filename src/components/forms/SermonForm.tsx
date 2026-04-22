@@ -24,6 +24,7 @@ import {
 import { supabase } from "@/src/lib/supabase";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { ImageUpload } from "@/src/components/ui/ImageUpload";
 
 const sermonSchema = z.object({
   title: z.string().min(2, "Title is required"),
@@ -32,9 +33,11 @@ const sermonSchema = z.object({
   series_id: z.string().optional(),
   video_url: z.string().url().optional().or(z.literal("")),
   audio_url: z.string().url().optional().or(z.literal("")),
-  preached_at: z.string().min(1, "Preached date is required"),
+  thumbnail_url: z.string().optional(),
+  sermon_date: z.string().min(1, "Sermon date is required"),
   status: z.enum(["published", "draft", "archived"]),
 });
+
 
 type SermonFormValues = z.infer<typeof sermonSchema>;
 
@@ -60,12 +63,13 @@ export default function SermonForm({ initialData, onSuccess, onCancel }: SermonF
     resolver: zodResolver(sermonSchema),
     defaultValues: initialData ? {
       ...initialData,
-      preached_at: initialData.preached_at ? new Date(initialData.preached_at).toISOString().slice(0, 10) : "",
+      speaker_name: initialData.sermon_speakers?.name || "",
+      sermon_date: initialData.sermon_date ? new Date(initialData.sermon_date).toISOString().slice(0, 10) : "",
     } : {
       title: "",
       description: "",
       speaker_name: "",
-      preached_at: new Date().toISOString().slice(0, 10),
+      sermon_date: new Date().toISOString().slice(0, 10),
       status: "published",
     },
   });
@@ -73,17 +77,43 @@ export default function SermonForm({ initialData, onSuccess, onCancel }: SermonF
   async function onSubmit(values: any) {
     setLoading(true);
     try {
+      // Handle speaker: find or create a speaker record, then use speaker_id
+      let speaker_id: string | null = null;
+      if (values.speaker_name?.trim()) {
+        const { data: existingSpeaker } = await supabase
+          .from('sermon_speakers')
+          .select('id')
+          .ilike('name', values.speaker_name.trim())
+          .maybeSingle();
+
+        if (existingSpeaker) {
+          speaker_id = existingSpeaker.id;
+        } else {
+          const { data: newSpeaker, error: speakerErr } = await supabase
+            .from('sermon_speakers')
+            .insert([{ name: values.speaker_name.trim() }])
+            .select('id')
+            .single();
+          if (speakerErr) throw speakerErr;
+          speaker_id = newSpeaker.id;
+        }
+      }
+
+      // Build the payload without speaker_name (not a DB column)
+      const { speaker_name, ...rest } = values;
+      const payload = { ...rest, speaker_id };
+
       if (initialData?.id) {
         const { error } = await supabase
           .from("sermons")
-          .update(values)
+          .update(payload)
           .eq("id", initialData.id);
         if (error) throw error;
         toast.success("Sermon updated successfully");
       } else {
         const { error } = await supabase
           .from("sermons")
-          .insert([values]);
+          .insert([payload]);
         if (error) throw error;
         toast.success("Sermon published successfully");
       }
@@ -128,10 +158,10 @@ export default function SermonForm({ initialData, onSuccess, onCancel }: SermonF
           />
           <FormField
             control={form.control}
-            name="preached_at"
+            name="sermon_date"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Preached On</FormLabel>
+                <FormLabel>Sermon Date</FormLabel>
                 <FormControl>
                   <Input type="date" {...field} />
                 </FormControl>
@@ -206,6 +236,47 @@ export default function SermonForm({ initialData, onSuccess, onCancel }: SermonF
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Status</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="published">Published</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="thumbnail_url"
+          render={({ field }) => (
+            <FormItem>
+              <ImageUpload
+                label="Sermon Thumbnail"
+                hint="Recommended: 16:9 ratio (1280×720). Shown as the sermon card preview image."
+                value={field.value}
+                onChange={field.onChange}
+                folder="ambassadors_assembly/sermons"
+                aspectRatio="video"
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="flex justify-end gap-3 pt-4">
           <Button type="button" variant="outline" onClick={onCancel}>

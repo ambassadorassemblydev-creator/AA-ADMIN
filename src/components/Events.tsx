@@ -244,7 +244,7 @@ export default function Events() {
 
                 <div className="relative w-full md:w-48 lg:w-64 h-48 md:h-auto overflow-hidden shrink-0">
                   <img 
-                    src={event.image_url || `https://picsum.photos/seed/${event.id}/800/400`} 
+                    src={event.cover_image_url || `https://picsum.photos/seed/${event.id}/800/400`} 
                     alt={event.title}
                     className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-700"
                     referrerPolicy="no-referrer"
@@ -290,19 +290,19 @@ export default function Events() {
                         <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
                           <MapPin className="w-3.5 h-3.5" />
                         </div>
-                        <span className="truncate">{event.location || 'Ambassadors Assembly'}</span>
+                        <span className="truncate">{event.location_name || 'Ambassadors Assembly'}</span>
                       </div>
                       <div className="flex items-center gap-2.5 text-xs font-medium text-muted-foreground">
                         <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
                           <Users className="w-3.5 h-3.5" />
                         </div>
                         <div className="flex flex-col">
-                          <span>{event.attendee_count || 0} Registered</span>
-                          {event.capacity > 0 && (
+                          <span>{event.current_attendees || 0} Registered</span>
+                          {event.max_attendees > 0 && (
                             <div className="w-24 h-1 bg-muted rounded-full mt-1 overflow-hidden">
                               <div 
                                 className="h-full bg-primary" 
-                                style={{ width: `${Math.min(100, ((event.attendee_count || 0) / event.capacity) * 100)}%` }} 
+                                style={{ width: `${Math.min(100, ((event.current_attendees || 0) / event.max_attendees) * 100)}%` }} 
                               />
                             </div>
                           )}
@@ -369,7 +369,7 @@ export default function Events() {
                         </div>
                         <div>
                           <p className="text-sm font-bold">{event.title}</p>
-                          <p className="text-[10px] text-muted-foreground">{new Date(event.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {event.location}</p>
+                          <p className="text-[10px] text-muted-foreground">{new Date(event.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {event.location_name}</p>
                         </div>
                       </div>
                       <Badge variant="outline" className="text-[8px] uppercase tracking-tighter">{event.category || 'General'}</Badge>

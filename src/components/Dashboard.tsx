@@ -135,12 +135,20 @@ export default function Dashboard({ onTabChange }: DashboardProps) {
   const [chartData, setChartData] = React.useState<ChartDataItem[]>([]);
   const [ministryDistribution, setMinistryDistribution] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [profile, setProfile] = React.useState<{ first_name: string | null; last_name: string | null; title: string | null; avatar_url: string | null } | null>(null);
 
   React.useEffect(() => {
     async function fetchDashboardData(retries = 3) {
       if (!user) return;
       
       try {
+        // Fetch profile for personalized greeting
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, title, avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (profileData) setProfile(profileData);
         // Fetch Stats
         const [
           { count: memberCount },
@@ -304,8 +312,18 @@ export default function Dashboard({ onTabChange }: DashboardProps) {
             </div>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight">
               Welcome back,<br /> 
-              <span className="text-white/80">{user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Ambassador'}</span>
+              <span className="text-white/90">
+                {profile?.title ? `${profile.title} ` : ''}
+                {profile?.first_name || user?.user_metadata?.full_name?.split(' ')[0] || 'Ambassador'}
+                {' '}{profile?.last_name || ''}
+              </span>
             </h1>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-bold uppercase tracking-widest">
+                <ShieldCheck className="w-3 h-3" />
+                {role ? role.replace('_', ' ') : 'Member'}
+              </span>
+            </div>
             <p className="text-primary-foreground/80 max-w-md text-lg font-medium">
               Your church community is thriving. Here's a snapshot of the impact you're making today.
             </p>

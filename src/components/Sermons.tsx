@@ -141,8 +141,9 @@ export default function Sermons() {
   };
 
   const handleDownload = (sermon: any) => {
-    if (sermon.pdf_url) {
-      window.open(sermon.pdf_url, '_blank');
+    const pdfUrl = sermon.notes_pdf_url || sermon.pdf_url;
+    if (pdfUrl) {
+      window.open(pdfUrl, '_blank');
       toast.success("Opening sermon notes...");
       
       // Log download action
@@ -266,7 +267,7 @@ export default function Sermons() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-widest">
                       <Calendar className="w-3 h-3" />
-                      {sermon.preached_at ? new Date(sermon.preached_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBD'}
+                      {sermon.sermon_date ? new Date(sermon.sermon_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBD'}
                     </div>
                     <div className="flex items-center gap-2">
                       {sermon.video_url && <Video className="w-3 h-3 text-muted-foreground" />}

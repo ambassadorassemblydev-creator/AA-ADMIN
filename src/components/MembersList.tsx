@@ -17,7 +17,11 @@ import {
   AlertCircle,
   MoreHorizontal,
   Users,
-  Loader2
+  Loader2,
+  ShieldCheck,
+  ShieldX,
+  Clock,
+  BadgeCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,8 +86,61 @@ export default function MembersList({ onTabChange }: { onTabChange?: (tab: strin
   const [isNoteAdding, setIsNoteAdding] = React.useState(false);
   const [newNote, setNewNote] = React.useState("");
 
+  const [pendingApprovals, setPendingApprovals] = React.useState<any[]>([]);
+  const [approvingId, setApprovingId] = React.useState<string | null>(null);
+
   const { role } = useAuth();
   const canViewNotes = role === 'pastor' || role === 'super_admin';
+  const canApprove = role === 'super_admin' || role === 'admin' || role === 'pastor';
+
+  const fetchPendingApprovals = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, email, avatar_url, title, role_claim, department_claim, already_serving, created_at')
+      .eq('approval_status', 'pending')
+      .order('created_at', { ascending: true });
+    setPendingApprovals(data || []);
+  };
+
+  const handleApprove = async (profile: any, targetRole: string) => {
+    setApprovingId(profile.id);
+    try {
+      // 1. Get role id
+      const { data: roleData } = await supabase.from('roles').select('id').eq('name', targetRole).single();
+      if (!roleData) throw new Error(`Role '${targetRole}' not found`);
+
+      // 2. Upsert user_roles
+      await supabase.from('user_roles').upsert({ user_id: profile.id, role_id: roleData.id }, { onConflict: 'user_id' });
+
+      // 3. Update profile approval_status
+      await supabase.from('profiles').update({
+        approval_status: 'approved',
+        approved_by: user?.id,
+        approved_at: new Date().toISOString(),
+      }).eq('id', profile.id);
+
+      toast.success(`${profile.first_name} has been approved as ${targetRole}! ✅`);
+      fetchPendingApprovals();
+      fetchMembers();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleReject = async (profile: any) => {
+    setApprovingId(profile.id);
+    try {
+      await supabase.from('profiles').update({ approval_status: 'rejected' }).eq('id', profile.id);
+      toast.success(`${profile.first_name}'s request has been declined.`);
+      fetchPendingApprovals();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setApprovingId(null);
+    }
+  };
 
   const fetchMembers = async (retries = 3) => {
     setLoading(true);
@@ -179,6 +236,7 @@ export default function MembersList({ onTabChange }: { onTabChange?: (tab: strin
   React.useEffect(() => {
     if (!authLoading) {
       const debounce = setTimeout(fetchMembers, 500);
+      fetchPendingApprovals();
       return () => clearTimeout(debounce);
     }
   }, [search, page, statusFilter, authLoading]);
@@ -321,6 +379,85 @@ export default function MembersList({ onTabChange }: { onTabChange?: (tab: strin
           </Dialog>
         </div>
       </div>
+
+      {/* ── PENDING APPROVALS PANEL ── */}
+      {canApprove && pendingApprovals.length > 0 && (
+        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/5 p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
+              <Clock className="w-4 h-4 text-amber-500" />
+            </div>
+            <div>
+              <h2 className="text-sm font-black uppercase tracking-widest text-amber-600">Pending Approvals</h2>
+              <p className="text-xs text-muted-foreground">{pendingApprovals.length} member{pendingApprovals.length !== 1 ? 's' : ''} flagged themselves as existing workers or pastors</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {pendingApprovals.map(p => (
+              <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-background/60 border border-amber-500/10">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12 border-2 border-amber-500/20">
+                    <AvatarImage src={p.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`} />
+                    <AvatarFallback>{p.first_name?.[0]}{p.last_name?.[0]}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-bold">{p.title} {p.first_name} {p.last_name}</p>
+                    <p className="text-xs text-muted-foreground">{p.email}</p>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {p.already_serving && <Badge variant="outline" className="text-[9px] border-amber-500/30 text-amber-600">Already Serving</Badge>}
+                      {p.role_claim && <Badge variant="outline" className="text-[9px] border-blue-500/30 text-blue-600">Claims: {p.role_claim}</Badge>}
+                      {p.department_claim && <Badge variant="outline" className="text-[9px] border-purple-500/30 text-purple-600">{p.department_claim}</Badge>}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Role to assign */}
+                  <Select
+                    defaultValue={p.role_claim && ['Pastor','Bishop','Apostle','Prophet','Evangelist'].includes(p.role_claim) ? 'pastor' :
+                      ['Elder','Deacon','Deaconess','Minister'].includes(p.role_claim) ? 'leader' : 'worker'}
+                    onValueChange={(v) => {
+                      // Store selected role per card
+                      p._selectedRole = v;
+                    }}
+                  >
+                    <SelectTrigger className="h-9 w-32 text-xs bg-background/50 border-none">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="worker">Worker</SelectItem>
+                      <SelectItem value="leader">Leader</SelectItem>
+                      <SelectItem value="pastor">Pastor</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="member">Member (no upgrade)</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Button
+                    size="sm"
+                    disabled={approvingId === p.id}
+                    onClick={() => handleApprove(p, p._selectedRole || 'worker')}
+                    className="gap-1.5 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                  >
+                    {approvingId === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={approvingId === p.id}
+                    onClick={() => handleReject(p)}
+                    className="gap-1.5 h-9 rounded-xl border-red-500/20 text-red-500 hover:bg-red-500/10 text-xs"
+                  >
+                    <ShieldX className="w-3 h-3" /> Decline
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">

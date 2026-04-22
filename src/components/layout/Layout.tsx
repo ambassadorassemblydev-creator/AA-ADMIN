@@ -32,7 +32,12 @@ import {
   ClipboardList,
   Library,
   Target,
-  PartyPopper
+  PartyPopper,
+  ClipboardCheck,
+  Tv,
+  Inbox,
+  PenLine,
+  Sun
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -112,10 +117,15 @@ export default function Layout({ children, onTabChange, activeTab }: { children:
     { id: "volunteers", icon: Heart, label: "Volunteers", category: "Community" },
     { id: "master-rota", icon: ClipboardList, label: "Master Rota", category: "Community" },
     { id: "events", icon: Calendar, label: "Events", category: "Engagement" },
+    { id: "event-registrations", icon: ClipboardCheck, label: "Registrations", category: "Engagement" },
     { id: "attendance", icon: CheckCircle2, label: "Attendance", category: "Engagement" },
+    { id: "live-stream", icon: Tv, label: "Live Stream", category: "Engagement" },
+    { id: "contact-inbox", icon: Inbox, label: "Contact Inbox", category: "Engagement" },
     { id: "prayer-wall", icon: MessageSquare, label: "Prayer Wall", category: "Engagement" },
     { id: "milestones", icon: PartyPopper, label: "Milestones", category: "Engagement" },
     { id: "sermons", icon: BookOpen, label: "Sermons", category: "Resources" },
+    { id: "blog-posts", icon: PenLine, label: "Blog Posts", category: "Resources" },
+    { id: "devotionals", icon: Sun, label: "Devotionals", category: "Resources" },
     { id: "media", icon: ImageIcon, label: "Media Gallery", category: "Resources" },
     { id: "resources", icon: Library, label: "Resource Center", category: "Resources" },
     { id: "ai-lab", icon: Sparkles, label: "AI Content Lab", category: "Resources" },
